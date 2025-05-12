@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電球シューティング</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column; /* Stack elements vertically */
+            min-height: 100vh;
+            background-color: #222; /* Darker background for light bulb theme */
+            margin: 0;
+            font-family: 'Press Start 2P', cursive; /* Arcade font */
+            overflow: hidden; /* Prevent scrollbars */
+            color: #eee; /* Light text color for dark background */
+        }
+        #gameContainer {
+            position: relative; /* Needed for absolute positioning of message boxes */
+            width: 90%; /* Responsive width */
+            max-width: 500px; /* Max width for larger screens */
+            aspect-ratio: 4 / 3; /* Maintain aspect ratio */
+            border: 5px solid #eee; /* Light border */
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4); /* Adjusted shadow for dark theme */
+            background-color: #333; /* Darker canvas background */
+            border-radius: 15px; /* Rounded corners for container */
+            overflow: hidden; /* Keep canvas inside */
+            margin-bottom: 10px; /* Reduced space below canvas */
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background-color: #333; /* Darker background for canvas */
+            border-radius: 10px; /* Slightly rounded corners for canvas */
+        }
+        #controls {
+            display: flex;
+            justify-content: center;
+            align-items: center; /* Vertically align score and button */
+            gap: 25px; /* Increased space between score and button */
+            margin-top: 10px; /* Reduced space above controls */
+            flex-wrap: wrap; /* Allow elements to wrap on smaller screens */
+            color: #eee; /* Light text color */
+            min-height: 40px; /* Ensure space for controls */
+        }
+         #score {
+             font-size: 18px; /* Slightly larger score text */
+         }
+        button {
+            font-family: 'Press Start 2P', cursive;
+            padding: 10px 18px; /* Adjusted padding */
+            font-size: 14px; /* Adjusted font size */
+            cursor: pointer;
+            background-color: #ffcc00; /* Yellow button */
+            color: #333; /* Dark text on yellow button */
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        button:active {
+            background-color: #cca300;
+            transform: scale(0.95);
+        }
+        /* General Message Box Styling (Game Over, Coupon) */
+        .message-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.85); /* Slightly more opaque */
+            color: #333; /* Dark text */
+            padding: 25px; /* Adjusted padding */
+            border-radius: 10px;
+            text-align: center;
+            font-size: 18px; /* Adjusted font size */
+            display: none; /* Hidden by default */
+            z-index: 10;
+            border: 3px solid #ffcc00; /* Yellow border */
+            flex-direction: column; /* Stack text and button */
+            align-items: center; /* Center items horizontally */
+            gap: 15px; /* Space between elements */
+        }
+        .message-box .message-text {
+            margin-bottom: 0; /* Remove default bottom margin */
+            font-weight: bold;
+        }
+        .message-box button { /* Style buttons inside message boxes */
+             background-color: #ff9800; /* Orange button */
+             color: white;
+             padding: 8px 15px;
+             font-size: 14px;
+        }
+         .message-box button:active {
+              background-color: #e68a00;
+         }
+         .message-box a { /* Style link inside message box */
+            color: #0077cc;
+            text-decoration: underline;
+            font-size: 14px;
+         }
+
+        /* Coupon Message Outside Canvas */
+        #couponMessageOutside {
+            display: none; /* Hidden by default */
+            margin-top: 10px;
+            padding: 10px 15px;
+            background-color: #ffcc00;
+            color: #333;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+         #couponMessageOutside a {
+            color: #0055aa;
+            font-weight: bold;
+            margin-left: 5px;
+         }
+
+
+        #instructions {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #aaa; /* Lighter gray for instructions */
+            text-align: center;
+        }
+
+        /* Touch Controls Styling */
+        #touchControls {
+            display: none; /* Hidden by default, shown on touch devices */
+            justify-content: space-between; /* Space out left/right */
+            width: 80%; /* Control width */
+            max-width: 300px; /* Max width */
+            margin: 10px auto 0 auto; /* Center the controls */
+        }
+        .touch-button {
+            font-family: 'Press Start 2P', cursive;
+            padding: 15px; /* Adjust padding */
+            font-size: 24px; /* Larger icons */
+            cursor: pointer;
+            background-color: rgba(255, 255, 255, 0.2); /* Semi-transparent white */
+            color: #eee; /* Light icon color */
+            border: 2px solid #eee;
+            border-radius: 50%; /* Circular buttons */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: background-color 0.3s, transform 0.1s;
+            user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            touch-action: manipulation;
+            width: 60px; /* Fixed width */
+            height: 60px; /* Fixed height */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .touch-button:active {
+            background-color: rgba(255, 255, 255, 0.4);
+            transform: scale(0.95);
+        }
+         #shootButtonTouch {
+             position: fixed; /* Keep shoot button in place */
+             bottom: 25px; /* Position from bottom */
+             right: 25px; /* Position from right */
+             padding: 20px; /* Increase padding */
+             font-size: 28px; /* Larger shoot icon */
+             background-color: #ffcc00; /* Yellow shoot button */
+             color: #333; /* Dark text */
+             border-radius: 50%;
+             width: 70px; /* Fixed width */
+             height: 70px; /* Fixed height */
+             display: flex; /* Use flexbox for centering */
+             justify-content: center; /* Center horizontally */
+             align-items: center; /* Center vertically */
+             border: none;
+         }
+          #shootButtonTouch:active {
+              background-color: #cca300;
+          }
+
+        /* Show touch controls only on touch devices */
+        @media (hover: none) and (pointer: coarse) {
+            #touchControls {
+                display: flex;
+            }
+             #shootButtonTouch {
+                 display: flex; /* Use flex to center content */
+             }
+             #instructions {
+                 display: none; /* Hide keyboard instructions */
+             }
+        }
+         @media (max-width: 600px) {
+             #score {
+                 font-size: 16px;
+             }
+             button { /* General button sizing */
+                 font-size: 12px; /* Smaller base button size */
+                 padding: 8px 12px;
+             }
+             .message-box {
+                 font-size: 14px; /* Smaller message box text */
+                 padding: 15px;
+             }
+             .message-box button {
+                 font-size: 12px;
+                 padding: 6px 10px;
+             }
+             .message-box a {
+                 font-size: 12px;
+             }
+             #couponMessageOutside {
+                 font-size: 12px;
+                 padding: 8px 10px;
+             }
+             .touch-button { /* Smaller touch buttons */
+                 font-size: 20px;
+                 width: 50px;
+                 height: 50px;
+                 padding: 10px;
+             }
+             #shootButtonTouch { /* Smaller shoot button */
+                 bottom: 20px;
+                 right: 20px;
+                 width: 60px;
+                 height: 60px;
+                 font-size: 24px;
+                 padding: 15px;
+             }
+             #touchControls {
+                 width: 90%; /* Wider control area on small screens */
+             }
+         }
+
+    </style>
+</head>
+<body>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        {/* Game Over Message Box */}
+        <div id="gameOverBox" class="message-box">
+            <div id="gameOverText" class="message-text">ゲームオーバー！</div>
+            <button id="restartButton">リスタート</button>
+        </div>
+        {/* Coupon Message Box (Inside Canvas) */}
+        <div id="couponMessageBoxInside" class="message-box">
+            <div class="message-text">🎉 クーポンゲット！ 🎉</div>
+            <a href="#" target="_blank" id="couponLinkInside">クーポンを見る</a> {/* Placeholder Link */}
+            <button id="continueButton">ゲームを続ける</button>
+        </div>
+    </div>
+
+    <div id="controls">
+        <div id="score">スコア: 0</div>
+        <button id="startButton">スタート</button>
+    </div>
+
+    {/* Coupon Message (Outside Canvas) */}
+    <div id="couponMessageOutside">
+        🎉 100点達成！ <a href="#" target="_blank" id="couponLinkOutside">クーポンをゲット！</a>
+    </div>
+
+
+    <div id="instructions">
+        操作: ← → キーで移動, スペースキーでショット
+    </div>
+
+    {/* Touch Controls */}
+    <div id="touchControls">
+        <button class="touch-button" id="leftButtonTouch">←</button>
+        <button class="touch-button" id="rightButtonTouch">→</button>
+    </div>
+     <button class="touch-button" id="shootButtonTouch" style="display: none;">⚡</button>
+
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const gameOverBox = document.getElementById('gameOverBox'); // Renamed from messageBox
+        const gameOverText = document.getElementById('gameOverText'); // Renamed from messageText
+        const couponMessageBoxInside = document.getElementById('couponMessageBoxInside');
+        const couponMessageOutside = document.getElementById('couponMessageOutside');
+        const startButton = document.getElementById('startButton');
+        const restartButton = document.getElementById('restartButton');
+        const continueButton = document.getElementById('continueButton'); // Continue button
+        const gameContainer = document.getElementById('gameContainer');
+
+        // Touch Controls Elements
+        const leftButtonTouch = document.getElementById('leftButtonTouch');
+        const rightButtonTouch = document.getElementById('rightButtonTouch');
+        const shootButtonTouch = document.getElementById('shootButtonTouch');
+
+
+        let player, projectiles, enemies, score, gameLoopId, enemySpawnIntervalId;
+        let keys = {}; // Object to track pressed keys
+        let isGameOver = true; // Game starts in 'over' state until Start is pressed
+        let isPausedForCoupon = false; // State for coupon pause
+        let couponAchieved = false; // Track if coupon has been awarded
+        let playerSpeed = 5;
+        let projectileSpeed = 7;
+        let enemySpeed = 2;
+
+        // --- Difficulty Settings ---
+        const initialEnemySpawnRate = 1500; // milliseconds (base rate)
+        const minEnemySpawnRate = 250;      // milliseconds (fastest rate)
+        const scoreThresholdForSpeedUp = 90; // Score from which speed up starts (so 100 is first increase)
+        const speedUpFactor = 0.9;          // Factor to decrease interval (10% faster)
+        let currentEnemySpawnRate = initialEnemySpawnRate; // Current rate, updated during game
+        // --- End Difficulty Settings ---
+
+
+        // Adjust canvas size based on container
+        function resizeCanvas() {
+            canvas.width = gameContainer.clientWidth;
+            canvas.height = gameContainer.clientHeight;
+            // Recalculate player position if game is running to keep it within bounds
+            if (player && !isGameOver) {
+                // Ensure player size is recalculated based on new canvas dimensions
+                player.size = Math.min(canvas.width, canvas.height) * 0.08;
+                player.speed = playerSpeed * (canvas.width / 500); // Rescale speed
+                player.x = Math.max(player.size / 2, Math.min(canvas.width - player.size / 2, player.x));
+                player.y = canvas.height - player.size * 1.5; // Keep player near bottom
+            }
+        }
+
+        // Player object
+        function createPlayer() {
+            const size = Math.min(canvas.width, canvas.height) * 0.08; // Responsive size
+            return {
+                x: canvas.width / 2,
+                y: canvas.height - size * 1.5, // Position near bottom
+                size: size,
+                emoji: '💡',
+                speed: playerSpeed * (canvas.width / 500) // Scale speed with canvas size
+            };
+        }
+
+        // Projectile object
+        function createProjectile(x, y) {
+            const size = Math.min(canvas.width, canvas.height) * 0.04;
+             return {
+                 x: x,
+                 y: y,
+                 size: size,
+                 emoji: '⚡',
+                 speed: projectileSpeed * (canvas.height / 400) // Scale speed
+             };
+        }
+
+        // Enemy object
+        function createEnemy() {
+            const size = Math.min(canvas.width, canvas.height) * 0.06;
+            return {
+                x: Math.random() * (canvas.width - size),
+                y: -size, // Start above the canvas
+                size: size,
+                emoji: '👾',
+                speed: enemySpeed * (canvas.height / 400) + Math.random() * 1.5 // Scale speed + increased variation
+            };
+        }
+
+        // Draw functions
+        function drawEmoji(obj) {
+            if (obj.size <= 0) return;
+            ctx.font = `${obj.size}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(obj.emoji, obj.x, obj.y);
+        }
+
+        function drawPlayer() {
+            if (player) drawEmoji(player);
+        }
+
+        function drawProjectiles() {
+            projectiles.forEach(p => drawEmoji(p));
+        }
+
+        function drawEnemies() {
+            enemies.forEach(e => drawEmoji(e));
+        }
+
+        // Update functions
+        function updatePlayer() {
+             if (!player || isGameOver || isPausedForCoupon) return;
+
+            if (keys['ArrowLeft'] && player.x > player.size / 2) {
+                player.x -= player.speed;
+            }
+            if (keys['ArrowRight'] && player.x < canvas.width - player.size / 2) {
+                player.x += player.speed;
+            }
+             player.x = Math.max(player.size / 2, Math.min(canvas.width - player.size / 2, player.x));
+        }
+
+        function updateProjectiles() {
+            if (isGameOver || isPausedForCoupon) return;
+            projectiles = projectiles.filter(p => p.y > -p.size);
+            projectiles.forEach(p => p.y -= p.speed);
+        }
+
+        function updateEnemies() {
+            if (isGameOver || isPausedForCoupon) return;
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                if (!enemies[i]) continue;
+                const enemy = enemies[i];
+                enemy.y += enemy.speed;
+
+                if (enemy.y > canvas.height + enemy.size / 2) {
+                    gameOver();
+                    return;
+                }
+            }
+        }
+
+        // --- Function to update enemy spawn rate based on score ---
+        function updateSpawnRate() {
+            if (score < scoreThresholdForSpeedUp + 10) { // No speed up below 100
+                return;
+            }
+
+            // Calculate how many 10-point increments above the threshold
+            const increments = Math.floor((score - scoreThresholdForSpeedUp) / 10);
+            // Calculate the new spawn rate, ensuring it doesn't go below the minimum
+            const newSpawnRate = Math.max(minEnemySpawnRate, initialEnemySpawnRate * Math.pow(speedUpFactor, increments));
+
+            // Only update the interval if the rate has actually changed
+            if (newSpawnRate !== currentEnemySpawnRate) {
+                currentEnemySpawnRate = newSpawnRate;
+                // Clear the existing interval
+                clearInterval(enemySpawnIntervalId);
+                // Start a new interval with the updated rate, only if game is running
+                if (!isGameOver && !isPausedForCoupon) {
+                    enemySpawnIntervalId = setInterval(spawnEnemy, currentEnemySpawnRate);
+                    console.log("Spawn rate updated:", currentEnemySpawnRate); // For debugging
+                }
+            }
+        }
+        // --- End spawn rate update function ---
+
+
+        // Collision detection
+        function checkCollisions() {
+             if (isGameOver || isPausedForCoupon) return;
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                if (!enemies[i]) continue;
+                const enemy = enemies[i];
+
+                // Projectile vs Enemy
+                for (let j = projectiles.length - 1; j >= 0; j--) {
+                    if (!projectiles[j]) continue;
+                    const projectile = projectiles[j];
+
+                    const dist = Math.hypot(projectile.x - enemy.x, projectile.y - enemy.y);
+
+                    if (dist < projectile.size / 2 + enemy.size / 2) {
+                        if (enemies[i]) enemies.splice(i, 1);
+                        if (projectiles[j]) projectiles.splice(j, 1);
+
+                        score += 10;
+                        scoreElement.textContent = `スコア: ${score}`;
+
+                        // --- Update spawn rate after score increase ---
+                        updateSpawnRate();
+                        // --- End spawn rate update ---
+
+                        // Check for Coupon Achievement
+                        if (score >= 100 && !couponAchieved) {
+                            achieveCoupon();
+                            if (isPausedForCoupon) return;
+                            break; // Exit projectile loop
+                        }
+                        break; // Exit projectile loop
+                    }
+                }
+
+                 // Player vs Enemy (check if enemy still exists)
+                 if (enemies[i] && player) {
+                     const distPlayerEnemy = Math.hypot(player.x - enemies[i].x, player.y - enemies[i].y);
+                     if (distPlayerEnemy < player.size / 2 + enemies[i].size / 2) {
+                         gameOver();
+                         return;
+                     }
+                 }
+            }
+        }
+
+        // Function to handle coupon achievement
+        function achieveCoupon() {
+            couponAchieved = true;
+            isPausedForCoupon = true;
+            console.log("Coupon Achieved!");
+
+            // Stop game loop and enemy spawning interval
+            cancelAnimationFrame(gameLoopId);
+            clearInterval(enemySpawnIntervalId); // Clear interval when paused
+
+            couponMessageBoxInside.style.display = 'flex';
+            couponMessageOutside.style.display = 'block';
+        }
+
+        // Function to continue the game after coupon
+        function continueGame() {
+            isPausedForCoupon = false;
+            couponMessageBoxInside.style.display = 'none';
+
+            // Resume game loop and enemy spawning interval with current rate
+            if (!isGameOver) {
+                gameLoopId = requestAnimationFrame(gameLoop);
+                // Clear any potentially lingering interval before starting new one
+                clearInterval(enemySpawnIntervalId);
+                enemySpawnIntervalId = setInterval(spawnEnemy, currentEnemySpawnRate); // Use current rate
+                console.log("Game Resumed. Spawn rate:", currentEnemySpawnRate);
+            }
+        }
+
+
+        // Game loop
+        function gameLoop() {
+            if (isGameOver || isPausedForCoupon) {
+                 if (isPausedForCoupon) {
+                     ctx.clearRect(0, 0, canvas.width, canvas.height);
+                     drawPlayer();
+                     drawProjectiles();
+                     drawEnemies();
+                 }
+                 return;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            updateEnemies();
+            if (isGameOver) return; // Check if game over after enemy update
+
+            updatePlayer();
+            updateProjectiles();
+
+            checkCollisions();
+            if (isGameOver) return; // Check if game over after collisions
+
+            drawPlayer();
+            drawProjectiles();
+            drawEnemies();
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        // Spawn enemies periodically
+        function spawnEnemy() {
+            // Double check state just before spawning
+            if (isGameOver || isPausedForCoupon) return;
+            enemies.push(createEnemy());
+        }
+
+        // Start game function
+        function startGame() {
+            if ((!isGameOver && !isPausedForCoupon) || canvas.width === 0 || canvas.height === 0) return;
+
+            console.log("Starting game...");
+            isGameOver = false;
+            isPausedForCoupon = false;
+            couponAchieved = false;
+            score = 0;
+            scoreElement.textContent = `スコア: ${score}`;
+            projectiles = [];
+            enemies = [];
+            keys = {};
+
+            // --- Reset spawn rate ---
+            currentEnemySpawnRate = initialEnemySpawnRate;
+            // --- End reset ---
+
+            resizeCanvas();
+            player = createPlayer();
+
+            gameOverBox.style.display = 'none';
+            couponMessageBoxInside.style.display = 'none';
+            couponMessageOutside.style.display = 'none';
+            startButton.style.display = 'none';
+
+            // Clear any existing intervals/loops before starting new ones
+            if (gameLoopId) cancelAnimationFrame(gameLoopId);
+            if (enemySpawnIntervalId) clearInterval(enemySpawnIntervalId);
+
+            // Start game loop and enemy spawning with initial rate
+            gameLoopId = requestAnimationFrame(gameLoop);
+            enemySpawnIntervalId = setInterval(spawnEnemy, currentEnemySpawnRate); // Use current (initial) rate
+            console.log("Game started. Initial spawn rate:", currentEnemySpawnRate);
+        }
+
+        // Game over function
+        function gameOver() {
+            if (isGameOver || isPausedForCoupon) return;
+
+            console.log("Game Over!");
+            isGameOver = true;
+            cancelAnimationFrame(gameLoopId);
+            clearInterval(enemySpawnIntervalId); // Clear interval on game over
+
+            gameOverText.textContent = `ゲームオーバー！ スコア: ${score}`;
+            gameOverBox.style.display = 'flex';
+            couponMessageBoxInside.style.display = 'none';
+            couponMessageOutside.style.display = 'none'; // Hide coupon message on game over
+
+            startButton.style.display = 'block';
+            startButton.textContent = 'リトライ';
+            keys = {};
+            touchMoveLeft = false;
+            touchMoveRight = false;
+        }
+
+        // --- Event Listeners ---
+
+        // Keyboard Listeners
+        window.addEventListener('keydown', (e) => {
+             if (isGameOver && e.key === 'Enter') {
+                 startGame();
+                 return;
+             }
+             if (isPausedForCoupon && e.key === 'Enter') {
+                 continueGame();
+                 return;
+             }
+             if (isGameOver || isPausedForCoupon) return;
+
+            keys[e.key] = true;
+            if (e.key === ' ') {
+                 projectiles.push(createProjectile(player.x, player.y - player.size / 2));
+                 e.preventDefault();
+            }
+             if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) {
+                 e.preventDefault();
+             }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // Button Listeners
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+        continueButton.addEventListener('click', continueGame);
+
+        // --- Touch Controls ---
+        let touchMoveLeft = false;
+        let touchMoveRight = false;
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            if (isGameOver || isPausedForCoupon) return;
+
+            const targetId = e.target.id;
+
+            if (targetId === 'leftButtonTouch') {
+                touchMoveLeft = true;
+                keys['ArrowLeft'] = true;
+            } else if (targetId === 'rightButtonTouch') {
+                touchMoveRight = true;
+                keys['ArrowRight'] = true;
+            } else if (targetId === 'shootButtonTouch') {
+                 projectiles.push(createProjectile(player.x, player.y - player.size / 2));
+            }
+        }
+
+        function handleTouchEnd(e) {
+             e.preventDefault();
+             const targetId = e.target.id;
+
+             if (targetId === 'leftButtonTouch') {
+                 touchMoveLeft = false;
+                 keys['ArrowLeft'] = false;
+             } else if (targetId === 'rightButtonTouch') {
+                 touchMoveRight = false;
+                 keys['ArrowRight'] = false;
+             }
+        }
+
+        // Check if it's a touch device to show controls
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        if (isTouchDevice) {
+            document.getElementById('touchControls').style.display = 'flex';
+            shootButtonTouch.style.display = 'flex';
+            document.getElementById('instructions').style.display = 'none';
+
+            leftButtonTouch.addEventListener('touchstart', handleTouchStart, { passive: false });
+            leftButtonTouch.addEventListener('touchend', handleTouchEnd, { passive: false });
+            rightButtonTouch.addEventListener('touchstart', handleTouchStart, { passive: false });
+            rightButtonTouch.addEventListener('touchend', handleTouchEnd, { passive: false });
+            shootButtonTouch.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+             const touchButtons = document.querySelectorAll('.touch-button');
+             touchButtons.forEach(button => {
+                 button.addEventListener('contextmenu', (e) => e.preventDefault());
+             });
+        }
+
+
+        // Initial setup
+        window.addEventListener('resize', resizeCanvas);
+
+        window.onload = () => {
+             resizeCanvas();
+             ctx.clearRect(0, 0, canvas.width, canvas.height);
+             setTimeout(() => {
+                 ctx.font = "16px 'Press Start 2P'";
+                 ctx.fillStyle = "#eee";
+                 ctx.textAlign = "center";
+                 if (canvas.width > 0 && canvas.height > 0) {
+                    ctx.fillText("ボタンを押してスタート！", canvas.width / 2, canvas.height / 2);
+                 } else {
+                    console.warn("Canvas has zero dimensions on load.");
+                 }
+             }, 100);
+        };
+
+    </script>
+
+</body>
+</html>
