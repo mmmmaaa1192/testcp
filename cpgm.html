@@ -14,9 +14,11 @@
             min-height: 100vh;
             background-color: #222; /* Darker background for light bulb theme */
             margin: 0;
+            padding-bottom: 100px; /* Add padding at the bottom to avoid overlap with iframe */
             font-family: 'Press Start 2P', cursive; /* Arcade font */
-            overflow: hidden; /* Prevent scrollbars */
+            overflow-x: hidden; /* Prevent horizontal scrollbars */
             color: #eee; /* Light text color for dark background */
+            position: relative; /* Needed for absolute positioning of iframe */
         }
         #gameContainer {
             position: relative; /* Needed for absolute positioning of message boxes */
@@ -29,6 +31,7 @@
             border-radius: 15px; /* Rounded corners for container */
             overflow: hidden; /* Keep canvas inside */
             margin-bottom: 10px; /* Reduced space below canvas */
+            z-index: 1; /* Ensure canvas is behind message boxes but above iframe initially */
         }
         canvas {
             display: block;
@@ -46,6 +49,7 @@
             flex-wrap: wrap; /* Allow elements to wrap on smaller screens */
             color: #eee; /* Light text color */
             min-height: 40px; /* Ensure space for controls */
+            z-index: 1; /* Keep controls above iframe */
         }
          #score {
              font-size: 18px; /* Slightly larger score text */
@@ -79,7 +83,7 @@
             text-align: center;
             font-size: 18px; /* Adjusted font size */
             display: none; /* Hidden by default */
-            z-index: 10;
+            z-index: 10; /* Ensure message boxes are on top */
             border: 3px solid #ffcc00; /* Yellow border */
             flex-direction: column; /* Stack text and button */
             align-items: center; /* Center items horizontally */
@@ -115,6 +119,7 @@
             text-align: center;
             font-size: 14px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+             z-index: 1; /* Keep above iframe */
         }
          #couponMessageOutside a {
             color: #0055aa;
@@ -128,6 +133,7 @@
             font-size: 12px;
             color: #aaa; /* Lighter gray for instructions */
             text-align: center;
+             z-index: 1; /* Keep above iframe */
         }
 
         /* Touch Controls Styling */
@@ -137,6 +143,7 @@
             width: 80%; /* Control width */
             max-width: 300px; /* Max width */
             margin: 10px auto 0 auto; /* Center the controls */
+             z-index: 5; /* Ensure touch controls are above iframe */
         }
         .touch-button {
             font-family: 'Press Start 2P', cursive;
@@ -178,10 +185,24 @@
              justify-content: center; /* Center horizontally */
              align-items: center; /* Center vertically */
              border: none;
+             z-index: 5; /* Ensure shoot button is above iframe */
          }
           #shootButtonTouch:active {
               background-color: #cca300;
           }
+
+        /* Embedded YouTube Iframe Styling */
+        #youtubeEmbed {
+            position: fixed; /* Position relative to the viewport */
+            bottom: 10px;    /* Distance from bottom */
+            left: 10px;     /* Distance from left */
+            width: 160px;   /* Small width */
+            height: 90px;   /* Small height (16:9 aspect ratio) */
+            z-index: 0;     /* Place behind most other elements */
+            border: 3px solid #555; /* Optional border */
+            border-radius: 5px;   /* Optional rounded corners */
+        }
+
 
         /* Show touch controls only on touch devices */
         @media (hover: none) and (pointer: coarse) {
@@ -193,6 +214,11 @@
              }
              #instructions {
                  display: none; /* Hide keyboard instructions */
+             }
+             /* Adjust iframe position slightly if touch controls are visible */
+             #youtubeEmbed {
+                 /* Maybe move it up slightly if needed, or ensure controls don't overlap */
+                 /* bottom: 80px; */ /* Example: Move up if needed */
              }
         }
          @media (max-width: 600px) {
@@ -234,6 +260,13 @@
              }
              #touchControls {
                  width: 90%; /* Wider control area on small screens */
+             }
+             /* Adjust iframe size and position for small screens */
+             #youtubeEmbed {
+                 width: 120px;
+                 height: 67.5px; /* Maintain aspect ratio */
+                 bottom: 5px;
+                 left: 5px;
              }
          }
 
@@ -277,6 +310,16 @@
         <button class="touch-button" id="rightButtonTouch">→</button>
     </div>
      <button class="touch-button" id="shootButtonTouch" style="display: none;">⚡</button>
+
+    {/* YouTube Embed */}
+    <iframe id="youtubeEmbed"
+        src="https://www.youtube.com/embed/VIDEO_ID" /* Replace VIDEO_ID with actual ID */
+        title="YouTube video player"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen>
+    </iframe>
 
 
     <script>
@@ -361,7 +404,7 @@
                 x: Math.random() * (canvas.width - size),
                 y: -size, // Start above the canvas
                 size: size,
-                emoji: '👾',
+                emoji: '�',
                 speed: enemySpeed * (canvas.height / 400) + Math.random() * 1.5 // Scale speed + increased variation
             };
         }
@@ -727,3 +770,4 @@
 
 </body>
 </html>
+�
