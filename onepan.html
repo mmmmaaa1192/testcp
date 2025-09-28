@@ -392,17 +392,13 @@
                     if (isDark) {
                         header.classList.remove('text-black');
                         header.classList.add('text-white');
-                        streakLabel.classList.remove('text-gray-700');
-                        streakLabel.classList.add('text-gray-400');
-                        maxStreakLabel.classList.remove('text-gray-800');
-                        maxStreakLabel.classList.add('text-gray-500');
+                        streakLabel.className = 'text-sm text-white/80';
+                        maxStreakLabel.className = 'text-xs text-white/80';
                     } else {
                         header.classList.remove('text-white');
                         header.classList.add('text-black');
-                        streakLabel.classList.remove('text-gray-400');
-                        streakLabel.classList.add('text-gray-700');
-                        maxStreakLabel.classList.remove('text-gray-500');
-                        maxStreakLabel.classList.add('text-gray-800');
+                        streakLabel.className = 'text-sm text-black/80';
+                        maxStreakLabel.className = 'text-xs text-black/80';
                     }
                 };
 
@@ -847,6 +843,7 @@
     </script>
 </body>
 </html>
+
 
 
 
