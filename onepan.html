@@ -492,15 +492,14 @@
                     }
 
                     if (isToday) dayEl.classList.add('ring-2', 'ring-orange-500');
-                    if (isFuture) {
-                        dayEl.classList.add('text-gray-600', 'cursor-not-allowed');
-                    } else {
-                        dayEl.classList.add('hover:bg-gray-600');
-                        dayEl.addEventListener('click', () => {
-                            selectedDate = dateString;
-                            navigateTo('home-page');
-                        });
-                    }
+                    
+                    // 未来の日付もクリックできるように修正
+                    dayEl.classList.add('hover:bg-gray-600');
+                    dayEl.addEventListener('click', () => {
+                        selectedDate = dateString;
+                        navigateTo('home-page');
+                    });
+                    
                     grid.appendChild(dayEl);
                 }
             };
@@ -779,4 +778,5 @@
     </script>
 </body>
 </html>
+
 
