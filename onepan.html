@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ワンパンマンチャレンジ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .page {
+            min-height: calc(100vh - 80px); /* フッターの高さを引く */
+        }
+        .nav-btn.active {
+            color: #f97316; /* orange-500 */
+        }
+        .ghost {
+            opacity: 0.5;
+            background: #4b5563; /* gray-600 */
+        }
+        .header-bg {
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+        .header-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1;
+        }
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white antialiased">
+
+<div id="app" class="max-w-md mx-auto bg-gray-800 shadow-lg rounded-lg overflow-hidden">
+
+    <main class="p-6 pb-20">
+        <!-- ホーム画面 -->
+        <section id="home-page" class="page">
+            <header class="header-bg text-center p-6 mb-6 rounded-lg bg-gray-700">
+                 <div class="header-content">
+                    <h1 class="text-2xl font-bold text-orange-500">ワンパンマンチャレンジ</h1>
+                </div>
+            </header>
+
+            <div id="streak-counter" class="header-bg text-center p-8 mb-6 rounded-lg bg-gray-700">
+                <div class="header-content">
+                    <h2 class="text-lg font-bold text-gray-300">継続日数</h2>
+                    <p id="current-streak" class="text-6xl font-bold text-orange-500 my-2">0</p>
+                    <p class="text-xs text-gray-400">最高連続記録: <span id="max-streak">0</span>日</p>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-lg font-bold mb-3 text-center">今日のヒーロー活動</h3>
+                <ul id="checklist" class="space-y-3">
+                    <!-- JavaScriptで生成 -->
+                </ul>
+            </div>
+            
+            <div id="quote-area" class="bg-gray-700 p-4 rounded-lg text-center">
+                <p id="quote-text" class="text-sm italic text-gray-300"></p>
+                <p id="quote-author" class="text-xs text-gray-400 mt-2"></p>
+            </div>
+        </section>
+
+        <!-- カレンダー画面 -->
+        <section id="calendar-page" class="page hidden">
+            <h2 class="text-xl font-bold text-center mb-6">活動カレンダー</h2>
+            <div class="bg-gray-700 p-4 rounded-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <button id="prev-month" class="px-3 py-1 bg-orange-600 rounded-md hover:bg-orange-700">&lt;</button>
+                    <h3 id="month-year" class="text-lg font-bold"></h3>
+                    <button id="next-month" class="px-3 py-1 bg-orange-600 rounded-md hover:bg-orange-700">&gt;</button>
+                </div>
+                <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-center">
+                    <!-- JavaScriptで生成 -->
+                </div>
+            </div>
+             <div class="mt-4 text-center text-sm text-gray-400">
+                <p>🎉: 全ノルマ達成</p>
+            </div>
+        </section>
+
+        <!-- 統計画面 -->
+        <section id="stats-page" class="page hidden">
+             <h2 class="text-xl font-bold text-center mb-6">活動の軌跡</h2>
+             <div class="space-y-4">
+                <div class="bg-gray-700 p-4 rounded-lg flex justify-between items-center">
+                    <span class="text-gray-300">総トレーニング日数</span>
+                    <span id="stats-total-days" class="font-bold text-orange-500 text-lg">0日</span>
+                </div>
+                <div class="bg-gray-700 p-4 rounded-lg flex justify-between items-center">
+                    <span class="text-gray-300">現在継続日数</span>
+                    <span id="stats-current-streak" class="font-bold text-orange-500 text-lg">0日</span>
+                </div>
+                <div class="bg-gray-700 p-4 rounded-lg flex justify-between items-center">
+                    <span class="text-gray-300">最高継続日数</span>
+                    <span id="stats-max-streak" class="font-bold text-orange-500 text-lg">0日</span>
+                </div>
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <p class="text-gray-300 mb-2">種目別総計</p>
+                    <ul id="stats-details" class="space-y-2 text-sm">
+                        <!-- JavaScriptで生成 -->
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 設定画面 -->
+        <section id="settings-page" class="page hidden">
+            <h2 class="text-xl font-bold text-center mb-6">設定</h2>
+            <div class="bg-gray-700 p-4 rounded-lg">
+                <h3 class="text-lg font-bold mb-4">カウンター背景画像</h3>
+                <p class="text-sm text-gray-400 mb-4">モチベーションの上がる画像を設定しましょう！</p>
+                <input type="file" id="image-upload" accept="image/*" class="mb-4 block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-500 file:text-white hover:file:bg-orange-600">
+                <button id="remove-image" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">画像を削除</button>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-gray-900 border-t border-gray-700">
+        <nav class="flex justify-around p-2">
+            <button data-page="home-page" class="nav-btn active flex flex-col items-center text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                <span class="text-xs">ホーム</span>
+            </button>
+            <button data-page="calendar-page" class="nav-btn flex flex-col items-center text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <span class="text-xs">カレンダー</span>
+            </button>
+            <button data-page="stats-page" class="nav-btn flex flex-col items-center text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                <span class="text-xs">統計</span>
+            </button>
+            <button data-page="settings-page" class="nav-btn flex flex-col items-center text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.096 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                 <span class="text-xs">設定</span>
+            </button>
+        </nav>
+    </footer>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- グローバル変数とDOM要素 ---
+    const pages = document.querySelectorAll('.page');
+    const navButtons = document.querySelectorAll('.nav-btn');
+    const checklist = document.getElementById('checklist');
+    
+    let appData = {
+        tasks: [
+            { id: 'pushups', label: '腕立て伏せ 100回', unit: '回', total: 100 },
+            { id: 'situps', label: '上体起こし 100回', unit: '回', total: 100 },
+            { id: 'squats', label: 'スクワット 100回', unit: '回', total: 100 },
+            { id: 'run', label: 'ランニング 10km', unit: 'km', total: 10 },
+        ],
+        records: {},
+        currentStreak: 0,
+        maxStreak: 0,
+        lastCompletedDate: null,
+        backgroundImage: null
+    };
+
+    const quotes = [
+        { text: "天才とは、1%のひらめきと99%の努力である。", author: "トーマス・エジソン" },
+        { text: "困難の中に、機会がある。", author: "アルベルト・アインシュタイン" },
+        { text: "自分自身を信じてみるだけでいい。きっと、生きる道が見えてくる。", author: "ゲーテ" },
+        { text: "行動を伴わないビジョンは、ただの夢だ。", author: "松下幸之助" },
+        { text: "今日という日は、残りの人生の最初の日である。", author: "チャールズ・ディードリッヒ" },
+        { text: "小さなことを積み重ねることが、とんでもないところへ行くただ一つの道だ。", author: "イチロー" },
+        { text: "最も重要なことは、人生を楽しむこと。幸せでいること、それが全てです。", author: "オードリー・ヘップバーン" }
+    ];
+    let draggedItem = null;
+
+    // --- データ管理 ---
+    function saveData() {
+        try {
+            localStorage.setItem('onePunchChallengeData', JSON.stringify(appData));
+        } catch (e) {
+            console.error("データの保存に失敗しました:", e);
+            // ここでユーザーに通知するUIを出すことも可能
+        }
+    }
+
+    function loadData() {
+        try {
+            const savedData = localStorage.getItem('onePunchChallengeData');
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                // データの整合性をチェック
+                if (parsedData.tasks && parsedData.records) {
+                    appData = { ...appData, ...parsedData };
+                }
+            }
+        } catch (e) {
+            console.error("データの読み込みに失敗しました:", e);
+            // 壊れたデータを削除するなどのフォールバック処理
+            localStorage.removeItem('onePunchChallengeData');
+        }
+    }
+
+    // --- 初期化処理 ---
+    function init() {
+        loadData();
+        renderChecklist();
+        updateUI();
+        setupEventListeners();
+        showRandomQuote();
+        applyBackgroundImage();
+        navigateTo('home-page');
+    }
+
+    // --- UI更新 ---
+    function updateUI() {
+        updateStreak();
+        renderChecklist(); // チェック状態を反映
+        renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+        renderStats();
+    }
+    
+    function applyBackgroundImage() {
+        const streakCounter = document.getElementById('streak-counter');
+        if (appData.backgroundImage) {
+            streakCounter.style.backgroundImage = `url(${appData.backgroundImage})`;
+        } else {
+            streakCounter.style.backgroundImage = 'none';
+        }
+    }
+
+    // --- ページナビゲーション ---
+    function navigateTo(pageId) {
+        pages.forEach(page => page.classList.toggle('hidden', page.id !== pageId));
+        navButtons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.page === pageId);
+        });
+        window.scrollTo(0, 0);
+    }
+    
+    // --- イベントリスナー設定 ---
+    function setupEventListeners() {
+        navButtons.forEach(btn => {
+            btn.addEventListener('click', () => navigateTo(btn.dataset.page));
+        });
+
+        // ドラッグ＆ドロップイベント
+        checklist.addEventListener('dragstart', (e) => {
+            draggedItem = e.target;
+            setTimeout(() => e.target.classList.add('ghost'), 0);
+        });
+
+        checklist.addEventListener('dragend', (e) => {
+            draggedItem.classList.remove('ghost');
+            const newOrder = [...checklist.querySelectorAll('li')].map(li => li.dataset.id);
+            appData.tasks = newOrder.map(id => appData.tasks.find(task => task.id === id));
+            saveData();
+        });
+
+        checklist.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const afterElement = getDragAfterElement(checklist, e.clientY);
+            if (afterElement == null) {
+                checklist.appendChild(draggedItem);
+            } else {
+                checklist.insertBefore(draggedItem, afterElement);
+            }
+        });
+        
+        document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
+        document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
+        
+        document.getElementById('image-upload').addEventListener('change', handleImageUpload);
+        document.getElementById('remove-image').addEventListener('click', removeBackgroundImage);
+    }
+
+    // --- チェックリスト機能 ---
+    function renderChecklist() {
+        checklist.innerHTML = '';
+        const today = getFormattedDate(new Date());
+        const todayRecord = appData.records[today] || {};
+
+        appData.tasks.forEach(task => {
+            const isDone = todayRecord[task.id] || false;
+            const li = document.createElement('li');
+            li.dataset.id = task.id;
+            li.draggable = true;
+            li.className = `flex items-center p-4 rounded-lg cursor-pointer transition-all ${isDone ? 'bg-orange-500 text-white' : 'bg-gray-700 hover:bg-gray-600'}`;
+            li.innerHTML = `
+                <div class="flex-grow">${task.label}</div>
+                <div class="w-6 h-6 rounded-full flex items-center justify-center ${isDone ? 'bg-white' : 'border-2 border-gray-400'}">
+                    ${isDone ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-orange-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>' : ''}
+                </div>
+            `;
+            li.addEventListener('click', () => toggleTask(task.id));
+            checklist.appendChild(li);
+        });
+    }
+
+    function toggleTask(taskId) {
+        const today = getFormattedDate(new Date());
+        if (!appData.records[today]) {
+            appData.records[today] = {};
+        }
+        appData.records[today][taskId] = !appData.records[today][taskId];
+        
+        updateStreak();
+        saveData();
+        renderChecklist();
+        renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+        renderStats();
+    }
+    
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('li:not(.ghost)')];
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+
+    // --- 継続日数計算 ---
+    function updateStreak() {
+        const today = new Date();
+        const todayStr = getFormattedDate(today);
+        
+        let currentStreak = 0;
+        let checkDate = new Date();
+
+        while (true) {
+            const checkDateStr = getFormattedDate(checkDate);
+            const record = appData.records[checkDateStr];
+            if (record && appData.tasks.every(task => record[task.id])) {
+                currentStreak++;
+                checkDate.setDate(checkDate.getDate() - 1);
+            } else {
+                break;
+            }
+        }
+        
+        appData.currentStreak = currentStreak;
+        if (appData.currentStreak > appData.maxStreak) {
+            appData.maxStreak = appData.currentStreak;
+        }
+
+        document.getElementById('current-streak').textContent = appData.currentStreak;
+        document.getElementById('max-streak').textContent = appData.maxStreak;
+    }
+
+    // --- カレンダー機能 ---
+    let currentDate = new Date();
+
+    function renderCalendar(year, month) {
+        const calendarGrid = document.getElementById('calendar-grid');
+        document.getElementById('month-year').textContent = `${year}年 ${month + 1}月`;
+        calendarGrid.innerHTML = '';
+
+        const days = ['日', '月', '火', '水', '木', '金', '土'];
+        days.forEach(day => {
+            const dayEl = document.createElement('div');
+            dayEl.className = 'font-bold text-xs text-gray-400';
+            dayEl.textContent = day;
+            calendarGrid.appendChild(dayEl);
+        });
+        
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        for (let i = 0; i < firstDay; i++) {
+            calendarGrid.appendChild(document.createElement('div'));
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayEl = document.createElement('div');
+            dayEl.className = 'py-1';
+            const dateStr = getFormattedDate(new Date(year, month, day));
+            const record = appData.records[dateStr];
+            
+            if (record && appData.tasks.every(task => record[task.id])) {
+                dayEl.textContent = '🎉';
+            } else {
+                dayEl.textContent = day;
+            }
+            calendarGrid.appendChild(dayEl);
+        }
+    }
+
+    function changeMonth(offset) {
+        currentDate.setMonth(currentDate.getMonth() + offset);
+        renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+    }
+
+    // --- 統計機能 ---
+    function renderStats() {
+        let totalDays = 0;
+        const totalCounts = {};
+        appData.tasks.forEach(task => totalCounts[task.id] = 0);
+        
+        for (const date in appData.records) {
+            const record = appData.records[date];
+            if (Object.values(record).some(done => done)) {
+                totalDays++;
+            }
+            appData.tasks.forEach(task => {
+                if(record[task.id]) totalCounts[task.id] += task.total;
+            });
+        }
+        
+        document.getElementById('stats-total-days').textContent = `${totalDays}日`;
+        document.getElementById('stats-current-streak').textContent = `${appData.currentStreak}日`;
+        document.getElementById('stats-max-streak').textContent = `${appData.maxStreak}日`;
+        
+        const statsDetails = document.getElementById('stats-details');
+        statsDetails.innerHTML = '';
+        appData.tasks.forEach(task => {
+            const li = document.createElement('li');
+            li.className = 'flex justify-between items-center bg-gray-800 p-2 rounded';
+            li.innerHTML = `
+                <span>${task.label.split(' ')[0]}</span>
+                <span class="font-bold">${totalCounts[task.id].toLocaleString()}${task.unit}</span>
+            `;
+            statsDetails.appendChild(li);
+        });
+    }
+    
+    // --- 名言機能 ---
+    function showRandomQuote() {
+        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+        document.getElementById('quote-text').textContent = `"${randomQuote.text}"`;
+        document.getElementById('quote-author').textContent = `- ${randomQuote.author}`;
+    }
+    
+    // --- 設定機能 ---
+    function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            // 画像をリサイズする処理
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 1024;
+                const MAX_HEIGHT = 1024;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                // 圧縮してデータURLを取得
+                const dataUrl = canvas.toDataURL(file.type, 0.8); // JPEGの場合、品質を80%に圧縮
+
+                appData.backgroundImage = dataUrl;
+                saveData();
+                applyBackgroundImage();
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function removeBackgroundImage() {
+        appData.backgroundImage = null;
+        saveData();
+        applyBackgroundImage();
+        document.getElementById('image-upload').value = ''; // ファイル選択をリセット
+    }
+
+    // --- ユーティリティ ---
+    function getFormattedDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    // --- アプリケーションの実行 ---
+    init();
+});
+</script>
+
+</body>
+</html>
+
