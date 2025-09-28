@@ -40,8 +40,6 @@
         .info-panel {
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            position: relative;
-            z-index: 20;
         }
         /* Range Sliderのつまみのスタイル */
         input[type=range] {
@@ -93,56 +91,59 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
-<body class="text-white flex items-center justify-center">
+<body class="text-white bg-gray-900">
     
     <canvas id="trajectoryCanvas"></canvas>
     <!-- 動くトラッカー要素 -->
     <div id="tracker"></div>
 
-    <!-- 設定と情報表示パネル -->
-    <div class="info-panel p-6 md:p-8 rounded-2xl shadow-2xl bg-gray-800/50 border border-gray-700/50 w-11/12 max-w-md max-h-[90vh] overflow-y-auto">
-        <h1 class="text-2xl md:text-3xl font-bold text-center mb-4 text-orange-400">業務時間トラッカー</h1>
-        <p class="text-center text-gray-300 mb-6">設定した時間でドットが画面を一周します。</p>
-        
-        <div class="space-y-4 mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="startTime" class="block mb-2 text-sm font-medium text-gray-300">開始時刻</label>
-                    <input type="time" id="startTime" value="09:00" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5">
+    <!-- パネルを中央に配置し、画面サイズに対応させるためのラッパー -->
+    <div class="fixed inset-0 z-20 flex items-center justify-center p-4">
+        <!-- 設定と情報表示パネル -->
+        <div class="info-panel p-6 md:p-8 rounded-2xl shadow-2xl bg-gray-800/50 border border-gray-700/50 w-full max-w-md max-h-full overflow-y-auto">
+            <h1 class="text-2xl md:text-3xl font-bold text-center mb-4 text-orange-400">業務時間トラッカー</h1>
+            <p class="text-center text-gray-300 mb-6">設定した時間でドットが画面を一周します。</p>
+            
+            <div class="space-y-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="startTime" class="block mb-2 text-sm font-medium text-gray-300">開始時刻</label>
+                        <input type="time" id="startTime" value="09:00" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5">
+                    </div>
+                    <div>
+                        <label for="endTime" class="block mb-2 text-sm font-medium text-gray-300">終了時刻</label>
+                        <input type="time" id="endTime" value="18:00" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5">
+                    </div>
                 </div>
                 <div>
-                    <label for="endTime" class="block mb-2 text-sm font-medium text-gray-300">終了時刻</label>
-                    <input type="time" id="endTime" value="18:00" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5">
-                </div>
-            </div>
-            <div>
-                 <label for="imageUpload" class="block mb-2 text-sm font-medium text-gray-300">トラッカー画像 (任意)</label>
-                 <input type="file" id="imageUpload" accept="image/*,image/gif" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-500 file:text-white hover:file:bg-orange-600 cursor-pointer">
-            </div>
-             <div>
-                <label for="trackerColor" class="block mb-2 text-sm font-medium text-gray-300">デフォルト色</label>
-                <input type="color" id="trackerColor" value="#f97316" class="p-1 h-10 w-full block bg-gray-700 border border-gray-600 cursor-pointer rounded-lg">
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                     <label for="imageSize" class="block mb-2 text-sm font-medium text-gray-300">画像サイズ: <span id="imageSizeValue">48</span>px</label>
-                     <input type="range" id="imageSize" min="24" max="128" value="48" class="w-full">
+                     <label for="imageUpload" class="block mb-2 text-sm font-medium text-gray-300">トラッカー画像 (任意)</label>
+                     <input type="file" id="imageUpload" accept="image/*,image/gif" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-500 file:text-white hover:file:bg-orange-600 cursor-pointer">
                 </div>
                  <div>
-                    <label for="maxImageSize" class="block mb-2 text-sm font-medium text-gray-300">最大サイズ (px)</label>
-                    <input type="number" id="maxImageSize" value="128" min="24" step="0.1" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5">
+                    <label for="trackerColor" class="block mb-2 text-sm font-medium text-gray-300">デフォルト色</label>
+                    <input type="color" id="trackerColor" value="#f97316" class="p-1 h-10 w-full block bg-gray-700 border border-gray-600 cursor-pointer rounded-lg">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                         <label for="imageSize" class="block mb-2 text-sm font-medium text-gray-300">画像サイズ: <span id="imageSizeValue">48</span>px</label>
+                         <input type="range" id="imageSize" min="24" max="128" value="48" class="w-full">
+                    </div>
+                     <div>
+                        <label for="maxImageSize" class="block mb-2 text-sm font-medium text-gray-300">最大サイズ (px)</label>
+                        <input type="number" id="maxImageSize" value="128" min="24" step="0.1" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5">
+                    </div>
+                </div>
+                 <div>
+                     <label for="trajectoryWidth" class="block mb-2 text-sm font-medium text-gray-300">軌跡の太さ: <span id="trajectoryWidthValue">8</span>px</label>
+                     <input type="range" id="trajectoryWidth" min="0" max="50" value="8" step="1" class="w-full">
                 </div>
             </div>
-             <div>
-                 <label for="trajectoryWidth" class="block mb-2 text-sm font-medium text-gray-300">軌跡の太さ: <span id="trajectoryWidthValue">8</span>px</label>
-                 <input type="range" id="trajectoryWidth" min="0" max="50" value="8" step="1" class="w-full">
+            
+            <div class="bg-gray-700/50 p-4 rounded-lg text-sm space-y-2">
+                 <p><strong>現在時刻:</strong> <span id="currentTime">--:--:--</span></p>
+                 <p><strong>進捗率:</strong> <span id="progress">0.00</span>%</p>
+                 <p class="hidden md:block"><strong>座標 (x, y):</strong> (<span id="coordinateX">0</span>, <span id="coordinateY">0</span>)</p>
             </div>
-        </div>
-        
-        <div class="bg-gray-700/50 p-4 rounded-lg text-sm space-y-2">
-             <p><strong>現在時刻:</strong> <span id="currentTime">--:--:--</span></p>
-             <p><strong>進捗率:</strong> <span id="progress">0.00</span>%</p>
-             <p class="hidden md:block"><strong>座標 (x, y):</strong> (<span id="coordinateX">0</span>, <span id="coordinateY">0</span>)</p>
         </div>
     </div>
 
