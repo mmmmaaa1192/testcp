@@ -493,7 +493,10 @@
                     taskEl.className = 'flex items-center justify-between p-3 bg-gray-700 rounded-lg cursor-pointer';
                     taskEl.dataset.taskId = task.id;
                     taskEl.innerHTML = `
-                        <span class="text-white">${task.name}</span>
+                        <div class="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3 text-gray-500 cursor-grab drag-handle" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" /></svg>
+                            <span class="text-white">${task.name}</span>
+                        </div>
                         <div class="w-6 h-6 rounded-full border-2 ${isCompleted ? 'bg-orange-500 border-orange-500' : 'border-gray-500'} flex items-center justify-center transition-colors duration-200 flex-shrink-0">
                             ${isCompleted ? '<svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>' : ''}
                         </div>
@@ -725,6 +728,7 @@
                 new Sortable(document.getElementById('task-list'), {
                     animation: 150,
                     ghostClass: 'ghost',
+                    handle: '.drag-handle', // ドラッグハンドルを指定
                     onEnd: (evt) => {
                         const movedTask = appState.tasks.find(t => t.id == evt.item.dataset.taskId);
                         const oldIndex = appState.tasks.indexOf(movedTask);
@@ -849,5 +853,6 @@
     </script>
 </body>
 </html>
+
 
 
