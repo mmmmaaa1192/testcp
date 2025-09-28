@@ -306,6 +306,79 @@
 
             // --- UI RENDERING ---
 
+            const getAverageBrightness = (imageUrl, callback) => {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    // パフォーマンスのためにキャンバスサイズを縮小
+                    const size = 50;
+                    canvas.width = size;
+                    canvas.height = size;
+                    ctx.drawImage(img, 0, 0, size, size);
+
+                    try {
+                        const imageData = ctx.getImageData(0, 0, size, size);
+                        const data = imageData.data;
+                        let r, g, b;
+                        let colorSum = 0;
+
+                        for (let x = 0, len = data.length; x < len; x += 4) {
+                            r = data[x];
+                            g = data[x + 1];
+                            b = data[x + 2];
+                            // 標準輝度公式を使用
+                            colorSum += (r * 0.299 + g * 0.587 + b * 0.114);
+                        }
+
+                        const brightness = Math.floor(colorSum / (size * size));
+                        callback(brightness);
+                    } catch (e) {
+                        console.error("輝度計算のために画像データを取得できませんでした:", e);
+                        callback(0); // エラー時は暗い背景とみなす
+                    }
+                };
+                img.onerror = () => {
+                    callback(0); // エラー時は暗い背景とみなす
+                };
+                img.src = imageUrl;
+            };
+
+            const updateHeaderTextColor = (imageUrl) => {
+                const header = document.getElementById('header');
+                const streakLabel = document.querySelector('#counter-section p:first-child');
+                const maxStreakLabel = document.getElementById('max-streak');
+                
+                const setTextColor = (isDark) => {
+                    if (isDark) {
+                        header.classList.remove('text-black');
+                        header.classList.add('text-white');
+                        streakLabel.classList.remove('text-gray-700');
+                        streakLabel.classList.add('text-gray-400');
+                        maxStreakLabel.classList.remove('text-gray-800');
+                        maxStreakLabel.classList.add('text-gray-500');
+                    } else {
+                        header.classList.remove('text-white');
+                        header.classList.add('text-black');
+                        streakLabel.classList.remove('text-gray-400');
+                        streakLabel.classList.add('text-gray-700');
+                        maxStreakLabel.classList.remove('text-gray-500');
+                        maxStreakLabel.classList.add('text-gray-800');
+                    }
+                };
+
+                if (!imageUrl) {
+                    setTextColor(true); // デフォルトは暗い背景
+                    return;
+                }
+
+                getAverageBrightness(imageUrl, (brightness) => {
+                    // 閾値は128。輝度が128以上なら明るい画像とみなす
+                    setTextColor(brightness < 128);
+                });
+            };
+
             const renderHeader = () => {
                 const header = document.getElementById('header');
                 const record = appState.records[selectedDate];
@@ -322,6 +395,7 @@
                     header.style.backgroundImage = 'none';
                     header.style.backgroundColor = 'rgb(17, 24, 39)'; // gray-900
                 }
+                updateHeaderTextColor(dailyImage);
             };
 
             const renderHomePage = () => {
@@ -735,6 +809,7 @@
     </script>
 </body>
 </html>
+
 
 
 
