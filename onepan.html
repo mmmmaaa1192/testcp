@@ -18,7 +18,7 @@
             background: #4b5563; /* gray-600 */
         }
         #header {
-            height: 180px; /* Fixed height */
+            height: 240px; /* 180pxから240pxに変更 */
         }
         .header-bg {
             background-size: cover;
@@ -57,12 +57,10 @@
     </style>
 </head>
 <body class="bg-gray-900 flex justify-center items-start min-h-screen">
-    <div id="app-container" class="w-full max-w-md h-[80vh] min-h-[500px] bg-gray-900 rounded-lg shadow-2xl flex flex-col overflow-hidden relative">
+    <div id="app-container" class="w-full max-w-md h-screen min-h-[500px] bg-gray-900 rounded-lg shadow-2xl flex flex-col overflow-hidden relative">
         <!-- Header -->
         <header id="header" class="header-bg rounded-t-lg p-4 text-center text-white relative flex flex-col justify-center">
-            <button id="capture-btn" title="画面をキャプチャ" class="absolute top-4 right-4 p-2 text-white bg-black bg-opacity-20 hover:bg-opacity-40 rounded-full transition-colors duration-200 z-10">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            </button>
+            <!-- キャプチャボタンを削除 -->
             <h2 id="header-title" class="text-2xl font-bold tracking-wider">ワンパンマンチャレンジ</h2>
             <div id="date-navigation-container"></div>
             <div id="counter-section" class="text-center">
@@ -196,7 +194,7 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- html2canvasのスクリプトタグを削除 -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- STATE MANAGEMENT ---
@@ -218,6 +216,56 @@
                 { text: "行動を伴わないビジョンは、ただの夢である。", author: "松下幸之助" },
                 { text: "千里の道も一歩から。", author: "老子" },
                 { text: "自分を信じろ。そうすればすべてが可能になる。", author: "ヨハン・ヴォルフガング・フォン・ゲーテ" },
+                { text: "ハングリーであれ、愚かであれ。", author: "スティーブ・ジョブズ" },
+                { text: "始める方法は、話すのをやめて行動し始めることだ。", author: "ウォルト・ディズニー" },
+                { text: "あなたの時間は限られている。だから他人の人生を生きて無駄にしてはいけない。", author: "スティーブ・ジョブズ" },
+                { text: "もし人生が予測可能であれば、それは人生であることをやめ、味気ないものになるだろう。", author: "エレノア・ルーズベルト" },
+                { text: "人生で持っているものを見れば、常にもっと多くを持つことになる。持っていないものを見れば、決して十分には持てない。", author: "オプラ・ウィンフリー" },
+                { text: "目標を途方もなく高く設定し、それが失敗に終わったとしても、あなたは他の誰の成功よりも上に失敗するだろう。", author: "ジェームズ・キャメロン" },
+                { text: "人生とは、他の計画を立てるのに忙しいときに起こるものだ。", author: "ジョン・レノン" },
+                { text: "生きる上での最大の栄光は、決して転ばないことにあるのではなく、転ぶたびに起き上がることにある。", author: "ネルソン・マンデラ" },
+                { text: "未来は、自分の夢の美しさを信じる者のものである。", author: "エレノア・ルーズベルト" },
+                { text: "最も暗い瞬間にこそ、私たちは光を見るために集中しなければならない。", author: "アリストテレス" },
+                { text: "道があるところに行くな。道がないところに行き、足跡を残せ。", author: "ラルフ・ワルド・エマーソン" },
+                { text: "人生で多くの敗北に直面するだろうが、決して自分自身が敗北させてはならない。", author: "マヤ・アンジェロウ" },
+                { text: "唯一不可能な旅は、決して始めない旅である。", author: "トニー・ロビンス" },
+                { text: "結局のところ、人生で重要なのは年数ではない。その年月にどれだけの人生があったかだ。", author: "エイブラハム・リンカーン" },
+                { text: "成功は最終的なものではなく、失敗は致命的ではない。重要なのは続ける勇気だ。", author: "ウィンストン・チャーチル" },
+                { text: "できると信じれば、もう半分は達成している。", author: "セオドア・ルーズベルト" },
+                { text: "我々の背後にあるものと前にあるものは、我々の内にあるものに比べれば些細なことだ。", author: "ラルフ・ワルド・エマーソン" },
+                { text: "止まらない限り、どれだけゆっくり進んでも問題ではない。", author: "孔子" },
+                { text: "我々の最大の弱点は諦めることにある。成功するための最も確実な方法は、常にもう一度だけ試すことだ。", author: "トーマス・A・エジソン" },
+                { text: "未来を予測する最善の方法は、それを創造することだ。", author: "ピーター・ドラッカー" },
+                { text: "私は失敗したことがない。ただ、うまくいかない1万通りの方法を見つけただけだ。", author: "トーマス・A・エジソン" },
+                { text: "創造的な人間は、他人を打ち負かす欲求ではなく、達成する欲求によって動機づけられる。", author: "アイン・ランド" },
+                { text: "風の向きは変えられないが、目的地に常に着くように帆を調整することはできる。", author: "ジミー・ディーン" },
+                { text: "完璧は達成できないが、完璧を追い求めれば卓越性を捉えることができる。", author: "ヴィンス・ロンバルディ" },
+                { text: "あなたがなる運命にある唯一の人物は、あなたがなると決めた人物である。", author: "ラルフ・ワルド・エマーソン" },
+                { text: "あなたが今まで望んだものはすべて、恐怖の向こう側にある。", author: "ジョージ・アデア" },
+                { text: "大きく夢見て、失敗を恐れるな。", author: "ノーマン・ヴォーン" },
+                { text: "成功とは、情熱を失うことなく失敗から失敗へと歩むことである。", author: "ウィンストン・チャーチル" },
+                { text: "目標を達成することによって得るものは、目標を達成することによってなるものほど重要ではない。", author: "ジグ・ジグラー" },
+                { text: "心こそがすべてだ。あなたは自分が考えたものになる。", author: "ブッダ" },
+                { text: "吟味されない人生は、生きる価値がない。", author: "ソクラテス" },
+                { text: "成功の80パーセントは、顔を出すことだ。", author: "ウディ・アレン" },
+                { text: "勝つことがすべてではないが、勝ちたいと思うことはすべてだ。", author: "ヴィンス・ロンバルディ" },
+                { text: "私は自分の状況の産物ではない。私は自分の決断の産物だ。", author: "スティーブン・コヴィー" },
+                { text: "岸を見失う勇気がなければ、決して海を渡ることはできない。", author: "クリストファー・コロンブス" },
+                { text: "あなたの人生で最も重要な二つの日は、生まれた日と、その理由を見つけた日だ。", author: "マーク・トウェイン" },
+                { text: "あなたができること、あるいはできると夢見ていることは何でも始めなさい。大胆さには天才、力、そして魔法が宿っている。", author: "ヨハン・ヴォルフガング・フォン・ゲーテ" },
+                { text: "最良の復讐は、圧倒的な成功を収めることだ。", author: "フランク・シナトラ" },
+                { text: "モチベーションは持続しないとよく言われる。まあ、入浴もそうだ。だから毎日お勧めするのだ。", author: "ジグ・ジグラー" },
+                { text: "人生は、人の勇気に比例して縮んだり広がったりする。", author: "アナイス・ニン" },
+                { text: "もしあなたの中に『お前には絵は描けない』という声が聞こえたら、何としてでも絵を描きなさい。そうすればその声は黙るだろう。", author: "フィンセント・ファン・ゴッホ" },
+                { text: "批判を避ける唯一の方法がある。何もせず、何も言わず、何者でもないことだ。", author: "アリストテレス" },
+                { text: "唯一の真の知恵は、自分が何も知らないと知ることにある。", author: "ソクラテス" },
+                { text: "自分の夢を築きなさい。さもなければ、誰かがあなたを雇って彼らの夢を築かせるだろう。", author: "ファラ・グレイ" },
+                { text: "なるべき自分になるのに、遅すぎるということはない。", author: "ジョージ・エリオット" },
+                { text: "七転び八起き。", author: "日本のことわざ" },
+                { text: "ロープの端まで来たら、結び目を作ってぶら下がれ。", author: "フランクリン・D・ルーズベルト" },
+                { text: "前に進む秘訣は、始めることだ。", author: "マーク・トウェイン" },
+                { text: "打ちのめされたかどうかではなく、立ち上がったかどうかが問題だ。", author: "ヴィンス・ロンバルディ" },
+                { text: "あなたの仕事は人生の大部分を占めることになる。真に満足する唯一の方法は、素晴らしい仕事だと信じることをすることだ。そして素晴らしい仕事をする唯一の方法は、自分の仕事を愛することだ。", author: "スティーブ・ジョブズ" }
             ];
 
             const getTodayDateString = () => new Date().toISOString().split('T')[0];
@@ -646,36 +694,7 @@
                     }
                 });
                 
-                // Screen Capture
-                document.getElementById('capture-btn').addEventListener('click', () => {
-                    const captureElement = document.getElementById('app-container');
-                    const captureButton = document.getElementById('capture-btn');
-                    
-                    // Hide the button so it's not in the screenshot
-                    captureButton.classList.add('hidden');
-
-                    html2canvas(captureElement, {
-                        useCORS: true,
-                        // Ensure it captures the whole scrollable area, not just the visible part
-                        height: captureElement.scrollHeight,
-                        width: captureElement.scrollWidth
-                    }).then(canvas => {
-                        const link = document.createElement('a');
-                        const date = new Date();
-                        const timestamp = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
-                        link.download = `one-punch-challenge_${timestamp}.png`;
-                        link.href = canvas.toDataURL('image/png');
-                        link.click();
-                        link.remove();
-                        
-                        // Show the button again after capture is complete
-                        captureButton.classList.remove('hidden');
-                    }).catch(err => {
-                        console.error('Screen capture failed:', err);
-                        // Make sure to show the button again even if it fails
-                        captureButton.classList.remove('hidden');
-                    });
-                });
+                // --- 画面キャプチャ機能を削除 ---
 
                 // Task Management (Settings Page)
                 document.getElementById('add-task-btn').addEventListener('click', () => {
@@ -716,4 +735,5 @@
     </script>
 </body>
 </html>
+
 
