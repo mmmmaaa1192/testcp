@@ -36,6 +36,7 @@
             bottom: 0;
             background-color: rgba(0, 0, 0, 0.4);
             z-index: 1;
+            mix-blend-mode: multiply;
         }
         .header-bg > * {
             position: relative;
@@ -53,6 +54,42 @@
         }
         .nav-btn.active {
             color: #f97316; /* orange-500 */
+        }
+        /* スライダーのつまみを大きくして操作しやすくする */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+            width: 100%;
+        }
+        /* Chrome, Safari, Opera, Edge */
+        input[type="range"]::-webkit-slider-runnable-track {
+             background: #4b5563; /* gray-600 */
+             height: 8px;
+             border-radius: 4px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            margin-top: -8px; /* (24px - 8px) / 2 * -1 */
+            background-color: #f97316;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+        }
+        /* Firefox */
+        input[type="range"]::-moz-range-track {
+             background: #4b5563; /* gray-600 */
+             height: 8px;
+             border-radius: 4px;
+        }
+        input[type="range"]::-moz-range-thumb {
+            border: none; /* Reset */
+            background-color: #f97316;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
         }
     </style>
 </head>
@@ -135,17 +172,17 @@
                         <div id="image-settings-group">
                             <div>
                                 <label for="image-position-slider" class="block mb-2 text-sm font-medium text-gray-300">写真の表示位置調整 (上下)</label>
-                                <input type="range" id="image-position-slider" min="0" max="100" step="1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                <input type="range" id="image-position-slider" min="0" max="100" step="1" class="w-full">
                                 <div class="flex justify-between text-xs text-gray-400 mt-1"><span>上</span><span>下</span></div>
                             </div>
                             <div class="mt-4">
                                 <label for="image-position-slider-x" class="block mb-2 text-sm font-medium text-gray-300">写真の表示位置調整 (左右)</label>
-                                <input type="range" id="image-position-slider-x" min="0" max="100" step="1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                <input type="range" id="image-position-slider-x" min="0" max="100" step="1" class="w-full">
                                 <div class="flex justify-between text-xs text-gray-400 mt-1"><span>左</span><span>右</span></div>
                             </div>
                             <div class="mt-4">
                                 <label for="image-zoom-slider" class="block mb-2 text-sm font-medium text-gray-300">写真の拡大・縮小</label>
-                                <input type="range" id="image-zoom-slider" min="100" max="300" step="1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                <input type="range" id="image-zoom-slider" min="100" max="300" step="1" class="w-full">
                                 <div class="flex justify-between text-xs text-gray-400 mt-1"><span>100%</span><span>300%</span></div>
                             </div>
                         </div>
@@ -347,22 +384,8 @@
 
             const updateHeaderTextColor = (imageUrl) => {
                 const header = document.getElementById('header');
-                const headerElements = [
-                    document.getElementById('header-title'),
-                    document.querySelector('#counter-section p:first-child'),
-                    document.getElementById('current-streak'),
-                    document.getElementById('max-streak'),
-                    document.getElementById('date-navigation-container')
-                ];
                 
-                const setTextColorAndShadow = (isDark) => {
-                    const shadowColor = isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)';
-                    const shadowStyle = `0 0 5px ${shadowColor}, 0 0 2px ${shadowColor}`;
-
-                    headerElements.forEach(el => {
-                        if(el) el.style.textShadow = shadowStyle;
-                    });
-                    
+                const setTextColor = (isDark) => {
                     const streakLabel = document.querySelector('#counter-section p:first-child');
                     const maxStreakLabel = document.getElementById('max-streak');
 
@@ -384,16 +407,13 @@
                 };
 
                 if (!imageUrl) {
-                    headerElements.forEach(el => {
-                        if(el) el.style.textShadow = 'none';
-                    });
-                    setTextColorAndShadow(true); // デフォルトは暗い背景
+                    setTextColor(true); // デフォルトは暗い背景
                     return;
                 }
 
                 getAverageBrightness(imageUrl, (brightness) => {
                     // 閾値は128。輝度が128以上なら明るい画像とみなす
-                    setTextColorAndShadow(brightness < 128);
+                    setTextColor(brightness < 128);
                 });
             };
 
@@ -827,6 +847,9 @@
     </script>
 </body>
 </html>
+
+
+
 
 
 
