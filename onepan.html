@@ -130,9 +130,9 @@
     </style>
 </head>
 <body class="bg-gray-900 flex justify-center items-start min-h-screen">
-    <div id="app-container" class="w-full max-w-md h-screen min-h-[500px] bg-gray-900 rounded-lg shadow-2xl flex flex-col overflow-hidden">
+    <div id="app-container" class="w-full max-w-md h-screen min-h-[500px] bg-gray-900 rounded-lg shadow-2xl overflow-hidden relative">
         <!-- Header -->
-        <header id="header" class="header-bg rounded-t-lg p-4 text-center text-white relative flex flex-col justify-center flex-shrink-0">
+        <header id="header" class="header-bg rounded-t-lg p-4 text-center text-white absolute top-0 left-0 right-0 flex flex-col justify-center z-10">
             <button id="hamburger-btn" class="absolute top-4 left-4 p-2 text-white bg-black bg-opacity-20 hover:bg-opacity-40 rounded-full transition-colors duration-200 z-20">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
@@ -144,7 +144,7 @@
         </header>
 
         <!-- Main Content -->
-        <main class="flex-grow h-0 overflow-y-auto custom-scrollbar p-4">
+        <main class="h-full overflow-y-auto custom-scrollbar p-4 pt-[256px]">
             <!-- Home Page -->
             <div id="home-page" class="page">
                 <div id="daily-image-section" class="text-center mb-2">
@@ -849,4 +849,5 @@
     </script>
 </body>
 </html>
+
 
