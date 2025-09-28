@@ -100,7 +100,7 @@
     <div id="tracker"></div>
 
     <!-- 設定と情報表示パネル -->
-    <div class="info-panel p-6 md:p-8 rounded-2xl shadow-2xl bg-gray-800/50 border border-gray-700/50 w-11/12 max-w-md">
+    <div class="info-panel p-6 md:p-8 rounded-2xl shadow-2xl bg-gray-800/50 border border-gray-700/50 w-11/12 max-w-md max-h-[90vh] overflow-y-auto">
         <h1 class="text-2xl md:text-3xl font-bold text-center mb-4 text-orange-400">業務時間トラッカー</h1>
         <p class="text-center text-gray-300 mb-6">設定した時間でドットが画面を一周します。</p>
         
@@ -126,7 +126,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                      <label for="imageSize" class="block mb-2 text-sm font-medium text-gray-300">画像サイズ: <span id="imageSizeValue">48</span>px</label>
-                     <input type="range" id="imageSize" min="24" max="128" value="48" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                     <input type="range" id="imageSize" min="24" max="128" value="48" class="w-full">
                 </div>
                  <div>
                     <label for="maxImageSize" class="block mb-2 text-sm font-medium text-gray-300">最大サイズ (px)</label>
@@ -135,7 +135,7 @@
             </div>
              <div>
                  <label for="trajectoryWidth" class="block mb-2 text-sm font-medium text-gray-300">軌跡の太さ: <span id="trajectoryWidthValue">8</span>px</label>
-                 <input type="range" id="trajectoryWidth" min="0" max="50" value="8" step="1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                 <input type="range" id="trajectoryWidth" min="0" max="50" value="8" step="1" class="w-full">
             </div>
         </div>
         
