@@ -347,10 +347,25 @@
 
             const updateHeaderTextColor = (imageUrl) => {
                 const header = document.getElementById('header');
-                const streakLabel = document.querySelector('#counter-section p:first-child');
-                const maxStreakLabel = document.getElementById('max-streak');
+                const headerElements = [
+                    document.getElementById('header-title'),
+                    document.querySelector('#counter-section p:first-child'),
+                    document.getElementById('current-streak'),
+                    document.getElementById('max-streak'),
+                    document.getElementById('date-navigation-container')
+                ];
                 
-                const setTextColor = (isDark) => {
+                const setTextColorAndShadow = (isDark) => {
+                    const shadowColor = isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)';
+                    const shadowStyle = `0 0 5px ${shadowColor}, 0 0 2px ${shadowColor}`;
+
+                    headerElements.forEach(el => {
+                        if(el) el.style.textShadow = shadowStyle;
+                    });
+                    
+                    const streakLabel = document.querySelector('#counter-section p:first-child');
+                    const maxStreakLabel = document.getElementById('max-streak');
+
                     if (isDark) {
                         header.classList.remove('text-black');
                         header.classList.add('text-white');
@@ -369,13 +384,16 @@
                 };
 
                 if (!imageUrl) {
-                    setTextColor(true); // デフォルトは暗い背景
+                    headerElements.forEach(el => {
+                        if(el) el.style.textShadow = 'none';
+                    });
+                    setTextColorAndShadow(true); // デフォルトは暗い背景
                     return;
                 }
 
                 getAverageBrightness(imageUrl, (brightness) => {
                     // 閾値は128。輝度が128以上なら明るい画像とみなす
-                    setTextColor(brightness < 128);
+                    setTextColorAndShadow(brightness < 128);
                 });
             };
 
@@ -809,6 +827,7 @@
     </script>
 </body>
 </html>
+
 
 
 
