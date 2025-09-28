@@ -55,11 +55,11 @@
         }
     </style>
 </head>
-<body class="bg-gray-800 flex justify-center items-start min-h-screen pt-8">
+<body class="bg-gray-900 flex justify-center items-start min-h-screen pt-8">
     <div id="app-container" class="w-full max-w-md h-[80vh] min-h-[500px] bg-gray-900 rounded-lg shadow-2xl flex flex-col overflow-hidden">
         <header id="header" class="header-bg rounded-t-lg p-4 text-center text-white relative flex flex-col justify-center">
             <h2 id="header-title" class="text-2xl font-bold tracking-wider">ワンパンマンチャレンジ</h2>
-            <div id="date-navigation-container" class="h-6 mt-1"></div>
+            <div id="date-navigation-container"></div>
             <div id="counter-section" class="text-center">
                 <p class="text-gray-400 text-sm">継続日数</p>
                 <p id="current-streak" class="text-6xl font-bold text-orange-500">0</p>
@@ -139,7 +139,7 @@
         <footer class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-gray-900 border-t border-gray-700 rounded-b-lg">
             <nav class="flex justify-around p-2">
                 <button data-page="home-page" class="nav-btn active flex flex-col items-center text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 R0 001 1m-6 0h6"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                     <span class="text-xs">ホーム</span>
                 </button>
                 <button data-page="calendar-page" class="nav-btn flex flex-col items-center text-gray-400">
@@ -224,7 +224,7 @@
                     header.style.backgroundPosition = `center ${imagePosition}%`;
                 } else {
                     header.style.backgroundImage = 'none';
-                    header.style.backgroundColor = '#1f2937'; // gray-800
+                    header.style.backgroundColor = 'rgb(17, 24, 39)'; // gray-900
                 }
             };
 
@@ -239,6 +239,7 @@
                     const d = new Date(selectedDate);
                     const formattedDate = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
                     headerTitle.textContent = `${formattedDate} の記録`;
+                    dateNavContainer.className = 'h-6 mt-1';
                     dateNavContainer.innerHTML = `<button id="back-today-btn" class="text-sm text-orange-400 hover:text-orange-300 transition-colors duration-200">今日の記録に戻る</button>`;
                     document.getElementById('back-today-btn').addEventListener('click', () => {
                         selectedDate = getTodayDateString();
@@ -246,6 +247,7 @@
                     });
                 } else {
                     headerTitle.textContent = 'ワンパンマンチャレンジ';
+                    dateNavContainer.className = '';
                     dateNavContainer.innerHTML = '';
                 }
 
@@ -421,9 +423,11 @@
                     if (streak > maxStreak) maxStreak = streak;
                 }
                 const today = new Date(getTodayDateString());
-                const lastCompletedDate = new Date(dates[dates.length - 1]);
-                if ((today - lastCompletedDate) / (1000 * 60 * 60 * 24) <= 1) {
-                    currentStreak = streak;
+                if (dates.length > 0) {
+                    const lastCompletedDate = new Date(dates[dates.length - 1]);
+                    if ((today - lastCompletedDate) / (1000 * 60 * 60 * 24) <= 1) {
+                        currentStreak = streak;
+                    }
                 }
                 return { current: currentStreak, max: maxStreak };
             };
@@ -516,4 +520,7 @@
     </script>
 </body>
 </html>
+
+
+
 
