@@ -97,13 +97,10 @@
     <div id="app-container" class="w-full max-w-md h-screen min-h-[500px] bg-gray-900 rounded-lg shadow-2xl flex flex-col overflow-hidden">
         <!-- Header -->
         <header id="header" class="header-bg rounded-t-lg p-4 text-center text-white relative flex flex-col justify-center flex-shrink-0">
-            <!-- キャプチャボタンを削除 -->
-            <h2 id="header-title" class="text-2xl font-bold tracking-wider">ワンパンマンチャレンジ</h2>
             <div id="date-navigation-container"></div>
             <div id="counter-section" class="text-center">
-                <p class="text-gray-400 text-sm">継続日数</p>
+                <p class="text-sm text-orange-500">継続日数</p>
                 <p id="current-streak" class="text-6xl font-bold text-orange-500">0</p>
-                <p id="max-streak" class="text-gray-500 text-xs">最高記録: 0日</p>
             </div>
         </header>
 
@@ -111,7 +108,7 @@
         <main class="flex-grow h-0 overflow-y-auto custom-scrollbar p-4">
             <!-- Home Page -->
             <div id="home-page" class="page">
-                <div id="daily-image-section" class="text-center mb-6">
+                <div id="daily-image-section" class="text-center mb-2">
                     <input type="file" id="daily-image-upload" accept="image/*" class="hidden"/>
                     <button id="add-daily-image-btn" class="text-sm bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
                         今日の写真を追加
@@ -120,6 +117,7 @@
                         写真を削除
                     </button>
                 </div>
+                <p id="max-streak" class="text-gray-400 text-xs text-left mb-6 px-1">最高記録: 0日</p>
 
                 <div id="task-list" class="space-y-3">
                     <!-- Tasks will be rendered here by JS -->
@@ -231,7 +229,6 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
-    <!-- html2canvasのスクリプトタグを削除 -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- STATE MANAGEMENT ---
@@ -314,7 +311,6 @@
                     localStorage.setItem('onePunchTrackerState', JSON.stringify(appState));
                 } catch (e) {
                     console.error("Error saving state to localStorage:", e);
-                    // A simple custom alert since alert() is not allowed.
                     const customAlert = document.createElement('div');
                     customAlert.className = 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-500 text-white p-4 rounded-lg shadow-lg z-50';
                     customAlert.textContent = 'データの保存に失敗しました。画像のサイズが大きすぎる可能性があります。';
@@ -328,9 +324,7 @@
                     const savedState = localStorage.getItem('onePunchTrackerState');
                     if (savedState) {
                         const parsedState = JSON.parse(savedState);
-                        // Basic validation for tasks
                         if (!parsedState.tasks || !Array.isArray(parsedState.tasks) || parsedState.tasks.length === 0 || !parsedState.tasks[0].id) {
-                            // If tasks are missing, malformed, or using old format, reset to default
                             parsedState.tasks = appState.tasks; 
                         }
                         appState = parsedState;
@@ -341,78 +335,45 @@
                 }
             };
 
-            // --- UI RENDERING ---
+            // --- Image Compression ---
+            const compressImage = (file, callback) => {
+                const MAX_WIDTH = 1280;
+                const MAX_HEIGHT = 1280;
+                const reader = new FileReader();
 
-            const getAverageBrightness = (imageUrl, callback) => {
-                const img = new Image();
-                img.crossOrigin = 'Anonymous';
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    // パフォーマンスのためにキャンバスサイズを縮小
-                    const size = 50;
-                    canvas.width = size;
-                    canvas.height = size;
-                    ctx.drawImage(img, 0, 0, size, size);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        let width = img.width;
+                        let height = img.height;
 
-                    try {
-                        const imageData = ctx.getImageData(0, 0, size, size);
-                        const data = imageData.data;
-                        let r, g, b;
-                        let colorSum = 0;
-
-                        for (let x = 0, len = data.length; x < len; x += 4) {
-                            r = data[x];
-                            g = data[x + 1];
-                            b = data[x + 2];
-                            // 標準輝度公式を使用
-                            colorSum += (r * 0.299 + g * 0.587 + b * 0.114);
+                        if (width > height) {
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                        } else {
+                            if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
                         }
 
-                        const brightness = Math.floor(colorSum / (size * size));
-                        callback(brightness);
-                    } catch (e) {
-                        console.error("輝度計算のために画像データを取得できませんでした:", e);
-                        callback(0); // エラー時は暗い背景とみなす
-                    }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.8); // 80% quality
+                        callback(dataUrl);
+                    };
+                    img.src = e.target.result;
                 };
-                img.onerror = () => {
-                    callback(0); // エラー時は暗い背景とみなす
-                };
-                img.src = imageUrl;
+                reader.readAsDataURL(file);
             };
 
-            const updateHeaderTextColor = (imageUrl) => {
-                const header = document.getElementById('header');
-                
-                const setTextColor = (isDark) => {
-                    const streakLabel = document.querySelector('#counter-section p:first-child');
-                    const maxStreakLabel = document.getElementById('max-streak');
-
-                    if (isDark) {
-                        header.classList.remove('text-black');
-                        header.classList.add('text-white');
-                        streakLabel.className = 'text-sm text-white/80';
-                        maxStreakLabel.className = 'text-xs text-white/80';
-                    } else {
-                        header.classList.remove('text-white');
-                        header.classList.add('text-black');
-                        streakLabel.className = 'text-sm text-black/80';
-                        maxStreakLabel.className = 'text-xs text-black/80';
-                    }
-                };
-
-                if (!imageUrl) {
-                    setTextColor(true); // デフォルトは暗い背景
-                    return;
-                }
-
-                getAverageBrightness(imageUrl, (brightness) => {
-                    // 閾値は128。輝度が128以上なら明るい画像とみなす
-                    setTextColor(brightness < 128);
-                });
-            };
-
+            // --- UI RENDERING ---
             const renderHeader = () => {
                 const header = document.getElementById('header');
                 const record = appState.records[selectedDate];
@@ -429,7 +390,6 @@
                     header.style.backgroundImage = 'none';
                     header.style.backgroundColor = 'rgb(17, 24, 39)'; // gray-900
                 }
-                updateHeaderTextColor(dailyImage);
             };
 
             const renderHomePage = () => {
@@ -443,16 +403,12 @@
                 if (selectedDate !== today) {
                     const d = new Date(selectedDate);
                     const formattedDate = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
-                    headerTitle.textContent = `${formattedDate} の記録`;
-                    dateNavContainer.className = 'h-6 mt-1';
-                    dateNavContainer.innerHTML = `<button id="back-today-btn" class="text-sm text-orange-400 hover:text-orange-300 transition-colors duration-200">今日の記録に戻る</button>`;
+                    dateNavContainer.innerHTML = `<button id="back-today-btn" class="text-sm text-orange-400 hover:text-orange-300 transition-colors duration-200">${formattedDate}の記録 (今日に戻る)</button>`;
                     document.getElementById('back-today-btn').addEventListener('click', () => {
                         selectedDate = getTodayDateString();
                         renderHomePage();
                     });
                 } else {
-                    headerTitle.textContent = 'ワンパンマンチャレンジ';
-                    dateNavContainer.className = '';
                     dateNavContainer.innerHTML = '';
                 }
 
@@ -481,7 +437,6 @@
                 appState.tasks.forEach(task => {
                     const isCompleted = currentRecord.includes(task.name);
                     const taskEl = document.createElement('div');
-                    // Changed cursor to pointer to better indicate the whole item is clickable
                     taskEl.className = 'flex items-center justify-between p-3 bg-gray-700 rounded-lg cursor-pointer';
                     taskEl.dataset.taskId = task.id;
                     taskEl.innerHTML = `
@@ -490,7 +445,6 @@
                             ${isCompleted ? '<svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>' : ''}
                         </div>
                     `;
-                    // The event listener is now on the entire task element
                     taskEl.addEventListener('click', () => {
                         updateRecord(task.name);
                     });
@@ -576,7 +530,6 @@
             };
             
             const renderSettingsPage = () => {
-                // Image position setting
                 const settingsGroup = document.getElementById('image-settings-group');
                 const noImageMsg = document.getElementById('no-image-message');
                 const sliderY = document.getElementById('image-position-slider');
@@ -595,7 +548,6 @@
                     noImageMsg.classList.remove('hidden');
                 }
 
-                // Task management setting
                 const taskListEl = document.getElementById('manage-tasks-list');
                 taskListEl.innerHTML = '';
                 appState.tasks.forEach(task => {
@@ -614,7 +566,6 @@
             const updateRecord = (taskName) => {
                 let record = appState.records[selectedDate];
                 if (!record) {
-                    // When a record is created for the first time, store the number of tasks for that day.
                     appState.records[selectedDate] = { completed: [], image: null, imagePosition: 50, imagePositionX: 50, imageZoom: 100, totalTasks: appState.tasks.length };
                     record = appState.records[selectedDate];
                 }
@@ -631,7 +582,6 @@
             };
 
             const calculateStreaks = () => {
-                // Filter for dates where all tasks for that specific day were completed.
                 const completedDates = Object.keys(appState.records).filter(date => {
                     const r = appState.records[date];
                     return r.completed.length > 0 && r.completed.length === r.totalTasks;
@@ -661,7 +611,6 @@
                     }
                 }
 
-                // Check current streak up to today
                 const today = new Date(getTodayDateString());
                 if (completedDates.length > 0) {
                     const lastCompletedDate = new Date(completedDates[completedDates.length - 1]);
@@ -694,7 +643,6 @@
                 navBtns.forEach(btn => btn.classList.remove('active'));
                 document.querySelector(`.nav-btn[data-page="${pageId}"]`).classList.add('active');
 
-                // Page-specific render functions
                 if (pageId === 'home-page') renderHomePage();
                 else if (pageId === 'calendar-page') renderCalendarPage();
                 else if (pageId === 'stats-page') renderStatsPage();
@@ -708,7 +656,6 @@
                 renderQuote();
                 navigateTo('home-page');
 
-                // Drag-and-drop for tasks
                 new Sortable(document.getElementById('task-list'), {
                     animation: 150,
                     ghostClass: 'ghost',
@@ -721,23 +668,19 @@
                     },
                 });
 
-                // Calendar navigation
                 document.getElementById('prev-month').addEventListener('click', () => { calendarDate.setMonth(calendarDate.getMonth() - 1); renderCalendarPage(); });
                 document.getElementById('next-month').addEventListener('click', () => { calendarDate.setMonth(calendarDate.getMonth() + 1); renderCalendarPage(); });
                 
-                // Image handling
                 const dailyImageUpload = document.getElementById('daily-image-upload');
                 document.getElementById('add-daily-image-btn').addEventListener('click', () => dailyImageUpload.click());
                 dailyImageUpload.addEventListener('change', (event) => {
                     const file = event.target.files[0];
                     if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
+                        compressImage(file, (compressedDataUrl) => {
                             if (!appState.records[selectedDate]) {
                                 appState.records[selectedDate] = { completed: [], image: null, imagePosition: 50, imagePositionX: 50, imageZoom: 100, totalTasks: appState.tasks.length };
                             }
-                            appState.records[selectedDate].image = e.target.result;
-                            // Reset image settings on new upload
+                            appState.records[selectedDate].image = compressedDataUrl;
                             appState.records[selectedDate].imagePosition = 50;
                             appState.records[selectedDate].imagePositionX = 50;
                             appState.records[selectedDate].imageZoom = 100;
@@ -746,8 +689,7 @@
                              if (document.getElementById('settings-page').classList.contains('hidden') === false) {
                                 renderSettingsPage();
                             }
-                        };
-                        reader.readAsDataURL(file);
+                        });
                     }
                 });
                 document.getElementById('remove-daily-image-btn').addEventListener('click', () => {
@@ -772,7 +714,6 @@
                     }
                 });
 
-                // New slider for X position
                 const imagePosSliderX = document.getElementById('image-position-slider-x');
                 imagePosSliderX.addEventListener('input', (e) => {
                     const record = appState.records[selectedDate];
@@ -787,7 +728,6 @@
                     }
                 });
                 
-                // New slider for Zoom
                 const imageZoomSlider = document.getElementById('image-zoom-slider');
                 imageZoomSlider.addEventListener('input', (e) => {
                     const record = appState.records[selectedDate];
@@ -802,9 +742,6 @@
                     }
                 });
                 
-                // --- 画面キャプチャ機能を削除 ---
-
-                // Task Management (Settings Page)
                 document.getElementById('add-task-btn').addEventListener('click', () => {
                     const input = document.getElementById('new-task-input');
                     const taskName = input.value.trim();
@@ -826,7 +763,6 @@
                     }
                 });
 
-                // Main navigation
                 navBtns.forEach(btn => {
                     btn.addEventListener('click', () => {
                         const pageId = btn.dataset.page;
@@ -843,13 +779,4 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
 
