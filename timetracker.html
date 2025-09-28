@@ -28,7 +28,7 @@
             background-color: #f97316; /* オレンジ色 (画像未選択時のデフォルト) */
             border-radius: 50%;
             position: absolute;
-            z-index: 10;
+            z-index: 30; /* パネル(z-20)より手前に表示 */
             box-shadow: 0 0 15px 5px rgba(249, 115, 22, 0.7);
             /* 動きと反転、サイズ変更を滑らかにする */
             transition: top 0.1s linear, left 0.1s linear, transform 0.3s ease, width 0.1s ease, height 0.1s ease;
@@ -395,7 +395,7 @@
             const perimeter = 2 * (screenWidth + screenHeight);
             const currentDistance = perimeter * progress;
 
-            let x = 0, y = 0; // These are the center coordinates on the path
+            let x = 0, y = 0; // The point on the perimeter path
 
             if (currentDistance < screenWidth) {
                 x = currentDistance; y = 0; tracker.style.transform = 'scaleX(1)';
@@ -413,20 +413,22 @@
 
             if (isImageTracker) {
                 // Non-centered: align the image div's edge with the screen edge
-                let topLeftX = x;
-                let topLeftY = y;
-
-                if (currentDistance <= screenWidth) { // Top
-                    topLeftY = 0;
-                } else if (currentDistance <= screenWidth + screenHeight) { // Right
-                    topLeftX = screenWidth - trackerSize;
-                } else if (currentDistance <= 2 * screenWidth + screenHeight) { // Bottom
-                    topLeftY = screenHeight - trackerSize;
+                if (currentDistance < screenWidth) { // Top
+                    finalX = x;
+                    finalY = 0;
+                } else if (currentDistance < screenWidth + screenHeight) { // Right
+                    finalX = screenWidth - trackerSize;
+                    finalY = y;
+                } else if (currentDistance < 2 * screenWidth + screenHeight) { // Bottom
+                    finalX = x - trackerSize;
+                    finalY = screenHeight - trackerSize;
                 } else { // Left
-                    topLeftX = 0;
+                    finalX = 0;
+                    finalY = y - trackerSize;
                 }
-                finalX = Math.max(0, Math.min(screenWidth - trackerSize, topLeftX));
-                finalY = Math.max(0, Math.min(screenHeight - trackerSize, topLeftY));
+                // Clamp position to stay within bounds, important for corners
+                finalX = Math.max(0, Math.min(screenWidth - trackerSize, finalX));
+                finalY = Math.max(0, Math.min(screenHeight - trackerSize, finalY));
 
             } else {
                 // Centered: align the tracker's center with the screen edge
