@@ -1,540 +1,598 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Play, Check, ArrowRight, RotateCcw, Filter, HelpCircle, Store, Clock, Timer } from 'lucide-react';
-
-// --- Components ---
-
-// いちごアイコン (SVG)
-const StrawberryIcon = ({ size = 24, className = "" }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="#ff4d4d" 
-    stroke="#c41e3a" 
-    strokeWidth="1.5" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={`inline-block ${className}`}
-  >
-    <path d="M5.5 17.5c1-3 2-6 2.5-9 1-5 8-5 9.5 0 .5 4 1.5 6 2.5 9 .5 1.5-1 3.5-3.5 3.5H7.5c-2.5 0-4-2-3.5-3.5Z" />
-    <path d="M12 2c-1.5 1-2.5 3-2.5 3.5" />
-    <path d="M12 2c1.5 1 2.5 3 2.5 3.5" />
-    <path d="M7 14h.01" />
-    <path d="M10 11h.01" />
-    <path d="M13 16h.01" />
-    <path d="M15 12h.01" />
-    <path d="M17 15h.01" />
-  </svg>
-);
-
-// 串に刺さったいちご (いちご飴)
-const SkeweredStrawberries = ({ count, angle }) => {
-  return (
-    <div 
-      className="absolute flex flex-col items-center justify-center p-2 transition-all duration-500"
-      style={{ 
-        transform: `rotate(${angle}deg)`,
-        width: '60px', 
-        height: '100px',
-        pointerEvents: 'none'
-      }}
-    >
-      <div className="absolute w-1.5 bg-amber-700/60 h-[120%] -z-10 rounded-full" />
-      <div className="flex flex-col gap-1">
-        {Array.from({ length: count }).map((_, i) => (
-          <StrawberryIcon key={i} size={32} className="drop-shadow-sm filter contrast-125" />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// バラのいちご
-const LooseStrawberry = ({ x, y, angle, visible }) => {
-  return (
-    <div 
-      className={`absolute transition-all duration-700 ${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-0'}`}
-      style={{ 
-        left: `${x}%`, 
-        top: `${y}%`, 
-        transform: `translate(-50%, -50%) rotate(${angle}deg)`, 
-        pointerEvents: 'none'
-      }}
-    >
-      <StrawberryIcon size={28} className="opacity-90 drop-shadow-sm" />
-    </div>
-  );
-};
-
-// 屋台の装飾
-const StallDecoration = () => (
-  <div className="absolute inset-0 z-0 pointer-events-none opacity-0 animate-in fade-in duration-1000 fill-mode-forwards">
-    <div className="absolute top-0 left-0 right-0 h-16 shadow-md z-10"
-      style={{
-        background: 'repeating-linear-gradient(90deg, #ff4d4d 0, #ff4d4d 30px, #ffffff 30px, #ffffff 60px)'
-      }}
-    >
-      <div className="absolute bottom-0 w-full flex justify-around">
-         {[...Array(5)].map((_, i) => (
-           <div key={i} className="w-1 h-3 bg-slate-900/10 rounded-full"></div>
-         ))}
-      </div>
-    </div>
-    <div className="absolute top-10 left-1/2 transform -translate-x-1/2 z-20">
-      <div className="bg-white border-4 border-amber-900 text-amber-900 px-6 py-2 rounded-lg shadow-lg font-bold text-xl tracking-widest whitespace-nowrap">
-        いちご飴 専門店
-      </div>
-    </div>
-    <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-amber-100/50 to-transparent pointer-events-none"></div>
-  </div>
-);
-
-// --- Main App ---
-
-const StrawberryInsight = () => {
-  const [stage, setStage] = useState('intro'); // intro, q1, q2, q4, q5, summary
-  const [inputValue, setInputValue] = useState('');
-  const [feedback, setFeedback] = useState(null); 
-  const [positions, setPositions] = useState({ loose: [], skewers: [] });
-  const [isFiltered, setIsFiltered] = useState(false);
-  
-  // Timer State
-  const [stageStart, setStageStart] = useState(0);
-  const [stageTimes, setStageTimes] = useState({}); // { q1: 10.5, q2: 5.2, ... }
-
-  // ステージごとの設定
-  const scenarios = {
-    q1: {
-      title: "第1問",
-      instruction: "画面の中に「いちご」は何個ありますか？",
-      skewerCount: 5,
-      berriesPerSkewer: 3,
-      looseCount: 12, // Total 27
-      correctAnswer: 27,
-      hint: "串に刺さっているものも、バラのものも、全て数えてください。",
-      allowFilter: false
-    },
-    q2: {
-      title: "第2問",
-      instruction: "「串に刺さったいちご」は何個ありますか？",
-      skewerCount: 5,
-      berriesPerSkewer: 4,
-      looseCount: 12, // Total 32
-      correctAnswer: 20,
-      hint: "バラのいちごは無視して、串のものだけを数えてください。",
-      allowFilter: false
-    },
-    q4: {
-      title: "第3問",
-      instruction: "あなたはいちご飴屋さんです。さて、「いちご」は何個ありますか？",
-      skewerCount: 5,
-      berriesPerSkewer: 3,
-      looseCount: 12, // Context answer: 15
-      correctAnswer: 15,
-      hint: "いちご飴屋さんにとって、商品にならないイチゴはカウント対象でしょうか？",
-      allowFilter: false
-    },
-    q5: {
-      title: "第4問",
-      instruction: "便利な道具（ボタン）が届きました！これを使って数えてください。",
-      skewerCount: 5,
-      berriesPerSkewer: 3,
-      looseCount: 12, 
-      correctAnswer: 15,
-      hint: "「片付ける」ボタンを使ってみましょう。",
-      allowFilter: true
-    }
-  };
-
-  // 座標生成 (完全非重複ロジック - 強化版)
-  const generatePositions = (scenario) => {
-    // 衝突判定定数 (少し調整して配置しやすくする)
-    const RADIUS_SKEWER = 13; 
-    const RADIUS_LOOSE = 6; 
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>いちごカウント・チャレンジ</title>
     
-    // 配置エリア定数
-    const MARGIN_TOP = 25;    
-    const MARGIN_BOTTOM = 20; 
-    const MARGIN_X = 15;      
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    // 1回の生成試行を行う関数
-    // forceMode: trueの場合は重なりチェックをスキップして配置する（安全策）
-    const tryCreateLayout = (forceMode = false) => {
-      const newSkewers = [];
-      const newLoose = [];
-      const entities = []; // {x, y, r}
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f2f5;
+        }
+        /* アニメーション用ユーティリティ */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+<body>
 
-      const isColliding = (x, y, r) => {
-        if (forceMode) return false; // 強制モードなら衝突なしとみなす
-        for (let e of entities) {
-          const dist = Math.sqrt(Math.pow(x - e.x, 2) + Math.pow(y - e.y, 2));
-          if (dist < (r + e.r + 2)) return true; // バッファを少し緩和(+2)
-        }
-        return false;
-      };
+<div id="root"></div>
 
-      // 串の配置
-      for (let i = 0; i < scenario.skewerCount; i++) {
-        let placed = false;
-        // 試行回数を十分確保
-        for(let attempt=0; attempt<200; attempt++) {
-          const x = Math.random() * (100 - MARGIN_X * 2) + MARGIN_X;
-          const y = Math.random() * (100 - MARGIN_TOP - MARGIN_BOTTOM) + MARGIN_TOP;
-          
-          if (!isColliding(x, y, RADIUS_SKEWER)) {
-            entities.push({ x, y, r: RADIUS_SKEWER });
-            newSkewers.push({
-              id: `s-${i}`,
-              count: scenario.berriesPerSkewer,
-              top: y,
-              left: x,
-              angle: Math.random() * 40 - 20
-            });
-            placed = true;
-            break;
-          }
-        }
-        if (!placed && !forceMode) return null; // 配置失敗したらこのセットは破棄
-        if (!placed && forceMode) {
-            // 強制モードなら場所関係なく置く
-            newSkewers.push({
-              id: `s-${i}`,
-              count: scenario.berriesPerSkewer,
-              top: 50, left: 50, angle: 0 
-            });
-        }
-      }
+<script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
 
-      // バラの配置
-      for (let i = 0; i < scenario.looseCount; i++) {
-        let placed = false;
-        for(let attempt=0; attempt<200; attempt++) {
-          const x = Math.random() * (100 - MARGIN_X * 2) + MARGIN_X;
-          const y = Math.random() * (100 - MARGIN_TOP - MARGIN_BOTTOM) + MARGIN_TOP;
-          
-          if (!isColliding(x, y, RADIUS_LOOSE)) {
-            entities.push({ x, y, r: RADIUS_LOOSE });
-            newLoose.push({
-              id: `l-${i}`,
-              x: x,
-              y: y,
-              angle: Math.random() * 360
-            });
-            placed = true;
-            break;
-          }
-        }
-        if (!placed && !forceMode) return null; 
-        if (!placed && forceMode) {
-             newLoose.push({ id: `l-${i}`, x: 50, y: 50, angle: 0 });
-        }
-      }
+    // --- Icons (Lucide replacement) ---
+    const IconBase = ({ children, size = 24, className = "" }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+            {children}
+        </svg>
+    );
 
-      return { loose: newLoose, skewers: newSkewers };
+    const Play = (props) => <IconBase {...props}><polygon points="5 3 19 12 5 21 5 3"></polygon></IconBase>;
+    const Check = (props) => <IconBase {...props}><polyline points="20 6 9 17 4 12"></polyline></IconBase>;
+    const ArrowRight = (props) => <IconBase {...props}><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></IconBase>;
+    const RotateCcw = (props) => <IconBase {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"></path><path d="M3 3v9h9"></path></IconBase>;
+    const Filter = (props) => <IconBase {...props}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></IconBase>;
+    const HelpCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></IconBase>;
+    const Store = (props) => <IconBase {...props}><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"></path><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"></path><path d="M2 7h20"></path><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"></path></IconBase>;
+    const Clock = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></IconBase>;
+    const Timer = (props) => <IconBase {...props}><line x1="10" y1="2" x2="14" y2="2"></line><line x1="12" y1="14" x2="15" y2="11"></line><circle cx="12" cy="14" r="8"></circle></IconBase>;
+
+    // --- Components ---
+
+    // いちごアイコン (SVG)
+    const StrawberryIcon = ({ size = 24, className = "" }) => (
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        width={size} 
+        height={size} 
+        viewBox="0 0 24 24" 
+        fill="#ff4d4d" 
+        stroke="#c41e3a" 
+        strokeWidth="1.5" 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        className={`inline-block ${className}`}
+      >
+        <path d="M5.5 17.5c1-3 2-6 2.5-9 1-5 8-5 9.5 0 .5 4 1.5 6 2.5 9 .5 1.5-1 3.5-3.5 3.5H7.5c-2.5 0-4-2-3.5-3.5Z" />
+        <path d="M12 2c-1.5 1-2.5 3-2.5 3.5" />
+        <path d="M12 2c1.5 1 2.5 3 2.5 3.5" />
+        <path d="M7 14h.01" />
+        <path d="M10 11h.01" />
+        <path d="M13 16h.01" />
+        <path d="M15 12h.01" />
+        <path d="M17 15h.01" />
+      </svg>
+    );
+
+    // 串に刺さったいちご (いちご飴)
+    const SkeweredStrawberries = ({ count, angle }) => {
+      return (
+        <div 
+          className="absolute flex flex-col items-center justify-center p-2 transition-all duration-500"
+          style={{ 
+            transform: `rotate(${angle}deg)`,
+            width: '60px', 
+            height: '100px',
+            pointerEvents: 'none'
+          }}
+        >
+          <div className="absolute w-1.5 bg-amber-700/60 h-[120%] -z-10 rounded-full" />
+          <div className="flex flex-col gap-1">
+            {Array.from({ length: count }).map((_, i) => (
+              <StrawberryIcon key={i} size={32} className="drop-shadow-sm filter contrast-125" />
+            ))}
+          </div>
+        </div>
+      );
     };
 
-    // 全体生成のリトライループ
-    // 成功するまで最大50回リトライ
-    for (let totalAttempts = 0; totalAttempts < 50; totalAttempts++) {
-      const result = tryCreateLayout(false);
-      if (result) {
-        setPositions(result);
-        return;
-      }
-    }
-    
-    // フォールバック: どうしても配置できない場合は強制配置（表示されないよりはマシ）
-    console.warn("Using fallback layout generation");
-    const fallbackResult = tryCreateLayout(true);
-    if (fallbackResult) setPositions(fallbackResult);
-  };
-
-  const startStage = (stageName) => {
-    setStage(stageName);
-    setInputValue('');
-    setFeedback(null);
-    setIsFiltered(false);
-    
-    // ステージ開始時間を記録
-    setStageStart(Date.now());
-
-    if (scenarios[stageName]) {
-      generatePositions(scenarios[stageName]);
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const currentScenario = scenarios[stage];
-    const userVal = parseInt(inputValue, 10);
-    
-    if (userVal === currentScenario.correctAnswer) {
-      setFeedback('correct');
-      // 正解した瞬間に時間を記録
-      const duration = (Date.now() - stageStart) / 1000;
-      setStageTimes(prev => ({ ...prev, [stage]: duration }));
-    } else {
-      setFeedback('incorrect');
-    }
-  };
-
-  const handleNext = () => {
-    if (stage === 'q1') startStage('q2');
-    else if (stage === 'q2') startStage('q4'); 
-    else if (stage === 'q4') startStage('q5'); 
-    else if (stage === 'q5') {
-      setStage('summary');
-    }
-  };
-
-  // --- Render Sections ---
-
-  if (stage === 'intro') {
-    return (
-      <div className="min-h-screen bg-pink-50 flex items-center justify-center p-4 font-sans text-slate-800">
-        <div className="bg-white max-w-md w-full rounded-2xl shadow-xl p-8 text-center border-4 border-pink-200">
-          <div className="mb-6 flex justify-center">
-            <div className="bg-pink-100 p-6 rounded-full">
-              <StrawberryIcon size={48} />
-            </div>
-          </div>
-          <h1 className="text-2xl font-bold mb-4 text-pink-600">いちごカウント・チャレンジ</h1>
-          <p className="text-slate-600 mb-8 leading-relaxed">
-            これは、あなたの「観察力」と「仕事の進め方」を診断するクイズです。<br/>
-            画面に表示されるいちごの数を数えてください。<br/>
-            全部で4問あります。
-          </p>
-          <button 
-            onClick={() => {
-              setStageTimes({}); // リセット
-              startStage('q1');
-            }}
-            className="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-md"
-          >
-            <Play size={20} fill="currentColor" />
-            スタート
-          </button>
+    // バラのいちご
+    const LooseStrawberry = ({ x, y, angle, visible }) => {
+      return (
+        <div 
+          className={`absolute transition-all duration-700 ${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-0'}`}
+          style={{ 
+            left: `${x}%`, 
+            top: `${y}%`, 
+            transform: `translate(-50%, -50%) rotate(${angle}deg)`, 
+            pointerEvents: 'none'
+          }}
+        >
+          <StrawberryIcon size={28} className="opacity-90 drop-shadow-sm" />
         </div>
+      );
+    };
+
+    // 屋台の装飾
+    const StallDecoration = () => (
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-0 animate-in fade-in duration-1000 fill-mode-forwards">
+        <div className="absolute top-0 left-0 right-0 h-16 shadow-md z-10"
+          style={{
+            background: 'repeating-linear-gradient(90deg, #ff4d4d 0, #ff4d4d 30px, #ffffff 30px, #ffffff 60px)'
+          }}
+        >
+          <div className="absolute bottom-0 w-full flex justify-around">
+             {[...Array(5)].map((_, i) => (
+               <div key={i} className="w-1 h-3 bg-slate-900/10 rounded-full"></div>
+             ))}
+          </div>
+        </div>
+        <div className="absolute top-10 left-1/2 transform -translate-x-1/2 z-20">
+          <div className="bg-white border-4 border-amber-900 text-amber-900 px-6 py-2 rounded-lg shadow-lg font-bold text-xl tracking-widest whitespace-nowrap">
+            いちご飴 専門店
+          </div>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-amber-100/50 to-transparent pointer-events-none"></div>
       </div>
     );
-  }
 
-  // Determine current display logic
-  const isSummary = stage === 'summary';
-  const currentScenario = isSummary ? scenarios['q5'] : scenarios[stage];
-  const isStallMode = stage === 'q4' || stage === 'q5' || stage === 'summary';
+    // --- Main App ---
 
-  // Result Calculation
-  const totalTime = Object.values(stageTimes).reduce((a, b) => a + b, 0).toFixed(1);
-
-  return (
-    <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4 font-sans overflow-hidden">
+    const StrawberryInsight = () => {
+      const [stage, setStage] = useState('intro'); // intro, q1, q2, q4, q5, summary
+      const [inputValue, setInputValue] = useState('');
+      const [feedback, setFeedback] = useState(null); 
+      const [positions, setPositions] = useState({ loose: [], skewers: [] });
+      const [isFiltered, setIsFiltered] = useState(false);
       
-      {/* Header Info */}
-      <div className="w-full max-w-2xl bg-white rounded-t-2xl shadow-sm border-b border-slate-100 p-4 flex justify-between items-center z-10">
-        <div className="font-bold text-slate-700 flex items-center gap-2">
-          {isSummary ? (
-             <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">結果発表</span>
-          ) : (
-             <span className="bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-sm">{currentScenario.title}</span>
-          )}
-          {isStallMode && <span className="flex items-center gap-1 text-amber-600 text-sm"><Store size={16}/> いちご飴屋モード</span>}
-        </div>
-        <div className="text-sm text-slate-400">
-          {isSummary ? <Clock size={16} /> : `Stage ${stage === 'q4' ? '3' : stage === 'q5' ? '4' : stage.replace('q', '')} / 4`}
-        </div>
-      </div>
+      // Timer State
+      const [stageStart, setStageStart] = useState(0);
+      const [stageTimes, setStageTimes] = useState({}); // { q1: 10.5, q2: 5.2, ... }
 
-      {/* Main Canvas Area */}
-      <div className="w-full max-w-2xl h-[450px] bg-white relative overflow-hidden border-x border-slate-100 shadow-inner group">
+      // ステージごとの設定
+      const scenarios = {
+        q1: {
+          title: "第1問",
+          instruction: "画面の中に「いちご」は何個ありますか？",
+          skewerCount: 5,
+          berriesPerSkewer: 3,
+          looseCount: 12, // Total 27
+          correctAnswer: 27,
+          hint: "串に刺さっているものも、バラのものも、全て数えてください。",
+          allowFilter: false
+        },
+        q2: {
+          title: "第2問",
+          instruction: "「串に刺さったいちご」は何個ありますか？",
+          skewerCount: 5,
+          berriesPerSkewer: 4,
+          looseCount: 12, // Total 32
+          correctAnswer: 20,
+          hint: "バラのいちごは無視して、串のものだけを数えてください。",
+          allowFilter: false
+        },
+        q4: {
+          title: "第3問",
+          instruction: "あなたはいちご飴屋さんです。さて、「いちご」は何個ありますか？",
+          skewerCount: 5,
+          berriesPerSkewer: 3,
+          looseCount: 12, // Context answer: 15
+          correctAnswer: 15,
+          hint: "いちご飴屋さんにとって、商品にならないイチゴはカウント対象でしょうか？",
+          allowFilter: false
+        },
+        q5: {
+          title: "第4問",
+          instruction: "便利な道具（ボタン）が届きました！これを使って数えてください。",
+          skewerCount: 5,
+          berriesPerSkewer: 3,
+          looseCount: 12, 
+          correctAnswer: 15,
+          hint: "「片付ける」ボタンを使ってみましょう。",
+          allowFilter: true
+        }
+      };
+
+      // 座標生成 (完全非重複ロジック - 強化版)
+      const generatePositions = (scenario) => {
+        // 衝突判定定数 (少し調整して配置しやすくする)
+        const RADIUS_SKEWER = 13; 
+        const RADIUS_LOOSE = 6; 
         
-        {/* Stall Illustration */}
-        {isStallMode && <StallDecoration />}
+        // 配置エリア定数
+        const MARGIN_TOP = 25;    
+        const MARGIN_BOTTOM = 20; 
+        const MARGIN_X = 15;      
 
-        {/* Background Grid */}
-        {!isStallMode && (
-          <div className="absolute inset-0 opacity-[0.03]" 
-               style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-        )}
+        // 1回の生成試行を行う関数
+        // forceMode: trueの場合は重なりチェックをスキップして配置する（安全策）
+        const tryCreateLayout = (forceMode = false) => {
+          const newSkewers = [];
+          const newLoose = [];
+          const entities = []; // {x, y, r}
 
-        {/* --- Render Strawberries --- */}
-        {positions.loose.map(berry => (
-          <LooseStrawberry 
-            key={berry.id} 
-            x={berry.x} 
-            y={berry.y} 
-            angle={berry.angle} 
-            visible={isSummary ? false : !isFiltered} 
-          />
-        ))}
+          const isColliding = (x, y, r) => {
+            if (forceMode) return false; // 強制モードなら衝突なしとみなす
+            for (let e of entities) {
+              const dist = Math.sqrt(Math.pow(x - e.x, 2) + Math.pow(y - e.y, 2));
+              if (dist < (r + e.r + 2)) return true; // バッファを少し緩和(+2)
+            }
+            return false;
+          };
 
-        {positions.skewers.map(skewer => (
-          <div 
-            key={skewer.id}
-            className="absolute transition-all duration-500 z-10"
-            style={{ 
-              top: `${skewer.top}%`, 
-              left: `${skewer.left}%`,
-              transform: 'translate(-50%, -50%)' 
-            }}
-          >
-            <SkeweredStrawberries count={skewer.count} angle={skewer.angle} />
-          </div>
-        ))}
+          // 串の配置
+          for (let i = 0; i < scenario.skewerCount; i++) {
+            let placed = false;
+            // 試行回数を十分確保
+            for(let attempt=0; attempt<200; attempt++) {
+              const x = Math.random() * (100 - MARGIN_X * 2) + MARGIN_X;
+              const y = Math.random() * (100 - MARGIN_TOP - MARGIN_BOTTOM) + MARGIN_TOP;
+              
+              if (!isColliding(x, y, RADIUS_SKEWER)) {
+                entities.push({ x, y, r: RADIUS_SKEWER });
+                newSkewers.push({
+                  id: `s-${i}`,
+                  count: scenario.berriesPerSkewer,
+                  top: y,
+                  left: x,
+                  angle: Math.random() * 40 - 20
+                });
+                placed = true;
+                break;
+              }
+            }
+            if (!placed && !forceMode) return null; // 配置失敗したらこのセットは破棄
+            if (!placed && forceMode) {
+                // 強制モードなら場所関係なく置く
+                newSkewers.push({
+                  id: `s-${i}`,
+                  count: scenario.berriesPerSkewer,
+                  top: 50, left: 50, angle: 0 
+                });
+            }
+          }
+
+          // バラの配置
+          for (let i = 0; i < scenario.looseCount; i++) {
+            let placed = false;
+            for(let attempt=0; attempt<200; attempt++) {
+              const x = Math.random() * (100 - MARGIN_X * 2) + MARGIN_X;
+              const y = Math.random() * (100 - MARGIN_TOP - MARGIN_BOTTOM) + MARGIN_TOP;
+              
+              if (!isColliding(x, y, RADIUS_LOOSE)) {
+                entities.push({ x, y, r: RADIUS_LOOSE });
+                newLoose.push({
+                  id: `l-${i}`,
+                  x: x,
+                  y: y,
+                  angle: Math.random() * 360
+            });
+                placed = true;
+                break;
+              }
+            }
+            if (!placed && !forceMode) return null; 
+            if (!placed && forceMode) {
+                 newLoose.push({ id: `l-${i}`, x: 50, y: 50, angle: 0 });
+            }
+          }
+
+          return { loose: newLoose, skewers: newSkewers };
+        };
+
+        // 全体生成のリトライループ
+        // 成功するまで最大50回リトライ
+        for (let totalAttempts = 0; totalAttempts < 50; totalAttempts++) {
+          const result = tryCreateLayout(false);
+          if (result) {
+            setPositions(result);
+            return;
+          }
+        }
         
-        {/* Summary Overlay: 詳細なタイム結果を表示 */}
-        {isSummary && (
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
-            <div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full border-2 border-green-100">
-               <h2 className="text-xl font-bold text-slate-800 mb-4 text-center flex items-center justify-center gap-2">
-                 <Check className="text-green-500"/> 全問正解！
-               </h2>
-               
-               <div className="space-y-3 mb-4">
-                 {[
-                   { id: 'q1', label: '第1問 (数える)' },
-                   { id: 'q2', label: '第2問 (選別)' },
-                   { id: 'q4', label: '第3問 (目的変更)' },
-                   { id: 'q5', label: '第4問 (ツール活用)' }
-                 ].map((q) => (
-                   <div key={q.id} className="flex justify-between items-center text-sm border-b border-slate-100 pb-1">
-                     <span className="text-slate-500">{q.label}</span>
-                     <span className={`font-mono font-bold ${q.id === 'q5' ? 'text-blue-600' : 'text-slate-700'}`}>
-                       {stageTimes[q.id] ? stageTimes[q.id].toFixed(1) : '-'}秒
-                     </span>
-                   </div>
-                 ))}
-                 <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-                   <span className="font-bold text-slate-700">合計時間</span>
-                   <span className="font-mono font-bold text-xl text-green-600">{totalTime}秒</span>
-                 </div>
-               </div>
-            </div>
-          </div>
-        )}
-      </div>
+        // フォールバック: どうしても配置できない場合は強制配置（表示されないよりはマシ）
+        console.warn("Using fallback layout generation");
+        const fallbackResult = tryCreateLayout(true);
+        if (fallbackResult) setPositions(fallbackResult);
+      };
 
-      {/* Control / Input Area */}
-      <div className="w-full max-w-2xl bg-white rounded-b-2xl shadow-lg p-6 border-t border-slate-100 z-30">
+      const startStage = (stageName) => {
+        setStage(stageName);
+        setInputValue('');
+        setFeedback(null);
+        setIsFiltered(false);
         
-        {isSummary ? (
-          // --- SUMMARY CONTENT ---
-          <div className="animate-in slide-in-from-bottom-4 duration-500">
-            <h3 className="text-lg font-bold text-center text-slate-700 mb-6">体験からわかること</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <div className="font-bold text-pink-600 mb-2 flex items-center gap-2">
-                    <HelpCircle size={18} /> 目的の再定義
-                  </div>
-                  <p className="text-slate-600 leading-relaxed">
-                    第3問で時間がかかりませんでしたか？<br/>
-                    「何のためにやるのか」を理解せず、ただ数えるだけでは、状況の変化に対応できません。
-                  </p>
-               </div>
-               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <div className="font-bold text-blue-600 mb-2 flex items-center gap-2">
-                    <Timer size={18} /> ツールの威力
-                  </div>
-                  <p className="text-slate-600 leading-relaxed">
-                    第4問のタイムを見てください。<br/>
-                    「ボタン」一つで劇的に短縮されました。<br/>
-                    気合で頑張るよりも、仕組み（ツール）を使うことが最大の効率化です。
-                  </p>
-               </div>
-            </div>
-            <button 
-              onClick={() => startStage('intro')}
-              className="mt-6 w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              <RotateCcw size={18} />
-              タイトルに戻る
-            </button>
-          </div>
-        ) : (
-          // --- GAME INPUT CONTENT ---
-          <>
-            <p className="text-lg font-bold text-slate-800 mb-4 text-center">
-              {currentScenario.instruction}
-            </p>
+        // ステージ開始時間を記録
+        setStageStart(Date.now());
 
-            {/* Filter Tool */}
-            {currentScenario.allowFilter && !feedback && (
-              <div className="mb-6 flex justify-center animate-in fade-in zoom-in duration-300">
-                <button
-                  onClick={() => setIsFiltered(!isFiltered)}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-md ${
-                    isFiltered 
-                      ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-500 scale-105' 
-                      : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105'
-                  }`}
-                >
-                  <Filter size={20} />
-                  {isFiltered ? '商品以外を表示する' : '商品(串)以外を片付ける'}
-                </button>
+        if (scenarios[stageName]) {
+          generatePositions(scenarios[stageName]);
+        }
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        const currentScenario = scenarios[stage];
+        const userVal = parseInt(inputValue, 10);
+        
+        if (userVal === currentScenario.correctAnswer) {
+          setFeedback('correct');
+          // 正解した瞬間に時間を記録
+          const duration = (Date.now() - stageStart) / 1000;
+          setStageTimes(prev => ({ ...prev, [stage]: duration }));
+        } else {
+          setFeedback('incorrect');
+        }
+      };
+
+      const handleNext = () => {
+        if (stage === 'q1') startStage('q2');
+        else if (stage === 'q2') startStage('q4'); 
+        else if (stage === 'q4') startStage('q5'); 
+        else if (stage === 'q5') {
+          setStage('summary');
+        }
+      };
+
+      // --- Render Sections ---
+
+      if (stage === 'intro') {
+        return (
+          <div className="min-h-screen bg-pink-50 flex items-center justify-center p-4 font-sans text-slate-800">
+            <div className="bg-white max-w-md w-full rounded-2xl shadow-xl p-8 text-center border-4 border-pink-200">
+              <div className="mb-6 flex justify-center">
+                <div className="bg-pink-100 p-6 rounded-full">
+                  <StrawberryIcon size={48} />
+                </div>
               </div>
+              <h1 className="text-2xl font-bold mb-4 text-pink-600">いちごカウント・チャレンジ</h1>
+              <p className="text-slate-600 mb-8 leading-relaxed">
+                これは、あなたの「観察力」と「仕事の進め方」を診断するクイズです。<br/>
+                画面に表示されるいちごの数を数えてください。<br/>
+                全部で4問あります。
+              </p>
+              <button 
+                onClick={() => {
+                  setStageTimes({}); // リセット
+                  startStage('q1');
+                }}
+                className="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-md"
+              >
+                <Play size={20} fill="currentColor" />
+                スタート
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      // Determine current display logic
+      const isSummary = stage === 'summary';
+      const currentScenario = isSummary ? scenarios['q5'] : scenarios[stage];
+      const isStallMode = stage === 'q4' || stage === 'q5' || stage === 'summary';
+
+      // Result Calculation
+      const totalTime = Object.values(stageTimes).reduce((a, b) => a + b, 0).toFixed(1);
+
+      return (
+        <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4 font-sans overflow-hidden">
+          
+          {/* Header Info */}
+          <div className="w-full max-w-2xl bg-white rounded-t-2xl shadow-sm border-b border-slate-100 p-4 flex justify-between items-center z-10">
+            <div className="font-bold text-slate-700 flex items-center gap-2">
+              {isSummary ? (
+                 <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">結果発表</span>
+              ) : (
+                 <span className="bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-sm">{currentScenario.title}</span>
+              )}
+              {isStallMode && <span className="flex items-center gap-1 text-amber-600 text-sm"><Store size={16}/> いちご飴屋モード</span>}
+            </div>
+            <div className="text-sm text-slate-400">
+              {isSummary ? <Clock size={16} /> : `Stage ${stage === 'q4' ? '3' : stage === 'q5' ? '4' : stage.replace('q', '')} / 4`}
+            </div>
+          </div>
+
+          {/* Main Canvas Area */}
+          <div className="w-full max-w-2xl h-[450px] bg-white relative overflow-hidden border-x border-slate-100 shadow-inner group">
+            
+            {/* Stall Illustration */}
+            {isStallMode && <StallDecoration />}
+
+            {/* Background Grid */}
+            {!isStallMode && (
+              <div className="absolute inset-0 opacity-[0.03]" 
+                   style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
             )}
 
-            {/* Answer Input */}
-            {!feedback ? (
-              <form onSubmit={handleSubmit} className="flex gap-3 justify-center max-w-xs mx-auto">
-                <input
-                  type="number"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="個数"
-                  className="w-24 text-center border-2 border-slate-200 rounded-xl px-4 py-2 text-xl font-bold focus:outline-none focus:border-pink-500"
-                  autoFocus
-                />
-                <button
-                  type="submit"
-                  disabled={!inputValue}
-                  className="bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-bold py-2 px-6 rounded-xl transition-colors"
-                >
-                  回答
-                </button>
-              </form>
-            ) : (
-              <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-300">
-                {feedback === 'correct' ? (
-                  <div className="bg-green-50 text-green-700 p-4 rounded-xl mb-4 border border-green-200">
-                    <div className="flex items-center justify-center gap-2 font-bold text-lg mb-1">
-                      <Check size={24} /> 正解！
-                    </div>
-                    {isFiltered && (
-                      <p className="text-sm mt-2 text-green-600">
-                        ツールを使って「商品」だけを表示したため、一瞬で分かりましたね。
+            {/* --- Render Strawberries --- */}
+            {positions.loose.map(berry => (
+              <LooseStrawberry 
+                key={berry.id} 
+                x={berry.x} 
+                y={berry.y} 
+                angle={berry.angle} 
+                visible={isSummary ? false : !isFiltered} 
+              />
+            ))}
+
+            {positions.skewers.map(skewer => (
+              <div 
+                key={skewer.id}
+                className="absolute transition-all duration-500 z-10"
+                style={{ 
+                  top: `${skewer.top}%`, 
+                  left: `${skewer.left}%`,
+                  transform: 'translate(-50%, -50%)' 
+                }}
+              >
+                <SkeweredStrawberries count={skewer.count} angle={skewer.angle} />
+              </div>
+            ))}
+            
+            {/* Summary Overlay: 詳細なタイム結果を表示 */}
+            {isSummary && (
+              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
+                <div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full border-2 border-green-100">
+                   <h2 className="text-xl font-bold text-slate-800 mb-4 text-center flex items-center justify-center gap-2">
+                     <Check className="text-green-500"/> 全問正解！
+                   </h2>
+                   
+                   <div className="space-y-3 mb-4">
+                     {[
+                       { id: 'q1', label: '第1問 (数える)' },
+                       { id: 'q2', label: '第2問 (選別)' },
+                       { id: 'q4', label: '第3問 (目的変更)' },
+                       { id: 'q5', label: '第4問 (ツール活用)' }
+                     ].map((q) => (
+                       <div key={q.id} className="flex justify-between items-center text-sm border-b border-slate-100 pb-1">
+                         <span className="text-slate-500">{q.label}</span>
+                         <span className={`font-mono font-bold ${q.id === 'q5' ? 'text-blue-600' : 'text-slate-700'}`}>
+                           {stageTimes[q.id] ? stageTimes[q.id].toFixed(1) : '-'}秒
+                         </span>
+                       </div>
+                     ))}
+                     <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                       <span className="font-bold text-slate-700">合計時間</span>
+                       <span className="font-mono font-bold text-xl text-green-600">{totalTime}秒</span>
+                     </div>
+                   </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Control / Input Area */}
+          <div className="w-full max-w-2xl bg-white rounded-b-2xl shadow-lg p-6 border-t border-slate-100 z-30">
+            
+            {isSummary ? (
+              // --- SUMMARY CONTENT ---
+              <div className="animate-in slide-in-from-bottom-4 duration-500">
+                <h3 className="text-lg font-bold text-center text-slate-700 mb-6">体験からわかること</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <div className="font-bold text-pink-600 mb-2 flex items-center gap-2">
+                        <HelpCircle size={18} /> 目的の再定義
+                      </div>
+                      <p className="text-slate-600 leading-relaxed">
+                        第3問で時間がかかりませんでしたか？<br/>
+                        「何のためにやるのか」を理解せず、ただ数えるだけでは、状況の変化に対応できません。
                       </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-red-50 text-red-700 p-4 rounded-xl mb-4 border border-red-200">
-                    <p className="font-bold">不正解...</p>
-                    <p className="text-sm mt-1">{currentScenario.hint}</p>
-                    <button 
-                      onClick={() => setFeedback(null)}
-                      className="mt-2 text-xs underline hover:text-red-800"
+                   </div>
+                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <div className="font-bold text-blue-600 mb-2 flex items-center gap-2">
+                        <Timer size={18} /> ツールの威力
+                      </div>
+                      <p className="text-slate-600 leading-relaxed">
+                        第4問のタイムを見てください。<br/>
+                        「ボタン」一つで劇的に短縮されました。<br/>
+                        気合で頑張るよりも、仕組み（ツール）を使うことが最大の効率化です。
+                      </p>
+                   </div>
+                </div>
+                <button 
+                  onClick={() => startStage('intro')}
+                  className="mt-6 w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <RotateCcw size={18} />
+                  タイトルに戻る
+                </button>
+              </div>
+            ) : (
+              // --- GAME INPUT CONTENT ---
+              <>
+                <p className="text-lg font-bold text-slate-800 mb-4 text-center">
+                  {currentScenario.instruction}
+                </p>
+
+                {/* Filter Tool */}
+                {currentScenario.allowFilter && !feedback && (
+                  <div className="mb-6 flex justify-center animate-in fade-in zoom-in duration-300">
+                    <button
+                      onClick={() => setIsFiltered(!isFiltered)}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-md ${
+                        isFiltered 
+                          ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-500 scale-105' 
+                          : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105'
+                      }`}
                     >
-                      もう一度挑戦
+                      <Filter size={20} />
+                      {isFiltered ? '商品以外を表示する' : '商品(串)以外を片付ける'}
                     </button>
                   </div>
                 )}
-                
-                {feedback === 'correct' && (
-                  <button
-                    onClick={handleNext}
-                    className="bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-colors inline-flex items-center gap-2"
-                  >
-                    {stage === 'q5' ? '結果を見る' : '次へ進む'} <ArrowRight size={18} />
-                  </button>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
 
-export default StrawberryInsight;
+                {/* Answer Input */}
+                {!feedback ? (
+                  <form onSubmit={handleSubmit} className="flex gap-3 justify-center max-w-xs mx-auto">
+                    <input
+                      type="number"
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      placeholder="個数"
+                      className="w-24 text-center border-2 border-slate-200 rounded-xl px-4 py-2 text-xl font-bold focus:outline-none focus:border-pink-500"
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      disabled={!inputValue}
+                      className="bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-bold py-2 px-6 rounded-xl transition-colors"
+                    >
+                      回答
+                    </button>
+                  </form>
+                ) : (
+                  <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    {feedback === 'correct' ? (
+                      <div className="bg-green-50 text-green-700 p-4 rounded-xl mb-4 border border-green-200">
+                        <div className="flex items-center justify-center gap-2 font-bold text-lg mb-1">
+                          <Check size={24} /> 正解！
+                        </div>
+                        {isFiltered && (
+                          <p className="text-sm mt-2 text-green-600">
+                            ツールを使って「商品」だけを表示したため、一瞬で分かりましたね。
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-red-50 text-red-700 p-4 rounded-xl mb-4 border border-red-200">
+                        <p className="font-bold">不正解...</p>
+                        <p className="text-sm mt-1">{currentScenario.hint}</p>
+                        <button 
+                          onClick={() => setFeedback(null)}
+                          className="mt-2 text-xs underline hover:text-red-800"
+                        >
+                          もう一度挑戦
+                        </button>
+                      </div>
+                    )}
+                    
+                    {feedback === 'correct' && (
+                      <button
+                        onClick={handleNext}
+                        className="bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-colors inline-flex items-center gap-2"
+                      >
+                        {stage === 'q5' ? '結果を見る' : '次へ進む'} <ArrowRight size={18} />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<StrawberryInsight />);
+</script>
+
+</body>
+</html>
