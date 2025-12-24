@@ -6,6 +6,7 @@
     <title>腹筋ハビットトラッカー</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -63,6 +64,38 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid transparent;
+        }
+        .tab-btn.active {
+            background: white;
+            color: #7c3aed;
+            border-color: white;
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
+        }
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .tab-btn.active:hover {
+            background: white;
+        }
+        .quick-input-btn {
+            transition: all 0.2s ease;
+        }
+        .quick-input-btn:active {
+            transform: scale(0.95);
+        }
+        #visual-tab {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .capture-area {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -76,6 +109,16 @@
                 腹筋ハビットトラッカー
             </h1>
             <p class="text-white/80 text-lg">毎日の腹筋を記録して、健康的な習慣を作ろう！</p>
+            
+            <!-- Tab Navigation -->
+            <div class="flex justify-center gap-4 mt-6">
+                <button id="tab-tracker" class="tab-btn active px-6 py-3 rounded-xl font-bold transition-all">
+                    📊 トラッカー
+                </button>
+                <button id="tab-visual" class="tab-btn px-6 py-3 rounded-xl font-bold transition-all">
+                    🎨 ビジュアル進捗
+                </button>
+            </div>
         </header>
 
         <!-- Stats Cards -->
@@ -109,7 +152,8 @@
             </div>
         </div>
 
-        <!-- Main Content -->
+        <!-- Tracker Tab -->
+        <div id="tracker-tab" class="tab-content">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Left Column: Input & Goal -->
             <div class="lg:col-span-1 space-y-6">
@@ -137,9 +181,36 @@
                                 type="number" 
                                 id="reps-input" 
                                 placeholder="例: 30"
-                                min="1"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg font-semibold"
+                                min="0"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-2xl font-bold text-center"
                             >
+                            
+                            <!-- Quick Input Buttons -->
+                            <div class="grid grid-cols-4 gap-2 mt-3">
+                                <button onclick="addReps(5)" class="quick-input-btn bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-2 rounded-lg">
+                                    +5
+                                </button>
+                                <button onclick="addReps(10)" class="quick-input-btn bg-green-100 hover:bg-green-200 text-green-700 font-bold py-2 rounded-lg">
+                                    +10
+                                </button>
+                                <button onclick="addReps(20)" class="quick-input-btn bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold py-2 rounded-lg">
+                                    +20
+                                </button>
+                                <button onclick="addReps(50)" class="quick-input-btn bg-pink-100 hover:bg-pink-200 text-pink-700 font-bold py-2 rounded-lg">
+                                    +50
+                                </button>
+                            </div>
+                            <div class="flex gap-2 mt-2">
+                                <button onclick="resetReps()" class="quick-input-btn flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 rounded-lg text-sm">
+                                    リセット
+                                </button>
+                                <button onclick="addReps(-1)" class="quick-input-btn bg-red-100 hover:bg-red-200 text-red-700 font-medium py-2 px-4 rounded-lg text-sm">
+                                    -1
+                                </button>
+                                <button onclick="addReps(-10)" class="quick-input-btn bg-red-100 hover:bg-red-200 text-red-700 font-medium py-2 px-4 rounded-lg text-sm">
+                                    -10
+                                </button>
+                            </div>
                         </div>
                         
                         <button 
@@ -171,8 +242,21 @@
                             </label>
                             <input 
                                 type="number" 
-                                id="goal-input" 
+                                id="daily-goal-input" 
                                 placeholder="例: 50"
+                                min="1"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg font-semibold"
+                            >
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                月間の目標回数
+                            </label>
+                            <input 
+                                type="number" 
+                                id="monthly-goal-input" 
+                                placeholder="例: 1500"
                                 min="1"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg font-semibold"
                             >
@@ -185,9 +269,15 @@
                             🎯 目標を保存
                         </button>
 
-                        <div id="goal-display" class="text-center p-3 bg-blue-50 rounded-lg">
-                            <span class="text-sm text-gray-600">現在の目標: </span>
-                            <span class="text-lg font-bold text-blue-600" id="current-goal">未設定</span>
+                        <div id="goal-display" class="space-y-2">
+                            <div class="text-center p-3 bg-blue-50 rounded-lg">
+                                <span class="text-xs text-gray-600">日次目標: </span>
+                                <span class="text-lg font-bold text-blue-600" id="current-daily-goal">未設定</span>
+                            </div>
+                            <div class="text-center p-3 bg-purple-50 rounded-lg">
+                                <span class="text-xs text-gray-600">月次目標: </span>
+                                <span class="text-lg font-bold text-purple-600" id="current-monthly-goal">未設定</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -263,6 +353,100 @@
             </div>
         </div>
 
+        </div>
+        </div>
+        <!-- End Tracker Tab -->
+
+        <!-- Visual Progress Tab -->
+        <div id="visual-tab" class="tab-content hidden">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex justify-end mb-4">
+                    <button 
+                        id="capture-btn"
+                        class="glass-card px-6 py-3 rounded-xl font-bold transition-all transform hover:scale-105 shadow-lg flex items-center gap-2"
+                    >
+                        📸 画像として保存
+                    </button>
+                </div>
+
+                <div id="capture-area" class="capture-area fade-in">
+                    <!-- Visual Stats Header -->
+                    <div class="text-center mb-8">
+                        <div class="text-6xl mb-4">💪</div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-2">腹筋トレーニング進捗</h2>
+                        <p class="text-gray-600" id="visual-date"></p>
+                    </div>
+
+                    <!-- Main Stats Grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        <div class="bg-gradient-to-br from-orange-100 to-orange-50 p-6 rounded-2xl text-center border-2 border-orange-200">
+                            <div class="text-4xl mb-2">🔥</div>
+                            <div class="text-4xl font-bold text-orange-600" id="visual-streak">0</div>
+                            <div class="text-sm text-gray-600 font-medium mt-1">連続日数</div>
+                        </div>
+                        
+                        <div class="bg-gradient-to-br from-blue-100 to-blue-50 p-6 rounded-2xl text-center border-2 border-blue-200">
+                            <div class="text-4xl mb-2">📅</div>
+                            <div class="text-4xl font-bold text-blue-600" id="visual-total-days">0</div>
+                            <div class="text-sm text-gray-600 font-medium mt-1">累計実施日</div>
+                        </div>
+                        
+                        <div class="bg-gradient-to-br from-purple-100 to-purple-50 p-6 rounded-2xl text-center border-2 border-purple-200">
+                            <div class="text-4xl mb-2">💯</div>
+                            <div class="text-4xl font-bold text-purple-600" id="visual-total-reps">0</div>
+                            <div class="text-sm text-gray-600 font-medium mt-1">累計回数</div>
+                        </div>
+                        
+                        <div class="bg-gradient-to-br from-green-100 to-green-50 p-6 rounded-2xl text-center border-2 border-green-200">
+                            <div class="text-4xl mb-2">⭐</div>
+                            <div class="text-4xl font-bold text-green-600" id="visual-average">0</div>
+                            <div class="text-sm text-gray-600 font-medium mt-1">平均回数</div>
+                        </div>
+                    </div>
+
+                    <!-- Level Display -->
+                    <div class="bg-gradient-to-br from-yellow-100 to-orange-100 p-8 rounded-2xl mb-8 text-center border-2 border-yellow-200">
+                        <div class="text-7xl mb-4" id="visual-level-emoji">🥚</div>
+                        <div class="text-3xl font-bold text-gray-800 mb-2" id="visual-level-name">初心者</div>
+                        <div class="text-gray-700 mb-4" id="visual-level-desc">始めたばかり</div>
+                        <div class="max-w-md mx-auto">
+                            <div class="bg-white rounded-full h-4 overflow-hidden shadow-inner">
+                                <div id="visual-level-progress" class="bg-gradient-to-r from-yellow-400 to-orange-500 h-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                            <div class="text-sm text-gray-700 mt-2 font-medium" id="visual-level-progress-text">次のレベルまで: 0/100</div>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Progress -->
+                    <div class="bg-gradient-to-br from-pink-100 to-purple-100 p-8 rounded-2xl border-2 border-pink-200">
+                        <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center">今月の進捗</h3>
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-gray-700 font-medium">月間実績</span>
+                            <span class="text-2xl font-bold text-purple-600" id="visual-month-reps">0</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-gray-700 font-medium">月間目標</span>
+                            <span class="text-2xl font-bold text-pink-600" id="visual-month-goal">-</span>
+                        </div>
+                        <div class="bg-white rounded-full h-6 overflow-hidden shadow-inner mb-3">
+                            <div id="visual-month-progress" class="bg-gradient-to-r from-pink-500 to-purple-500 h-full transition-all duration-500 flex items-center justify-center" style="width: 0%">
+                                <span class="text-xs font-bold text-white" id="visual-month-percent"></span>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-sm text-gray-600" id="visual-month-status">目標達成まであと 0 回</span>
+                        </div>
+                    </div>
+
+                    <!-- Watermark -->
+                    <div class="text-center mt-8 text-gray-400 text-sm">
+                        腹筋ハビットトラッカー 💪
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- End Visual Tab -->
+
         <!-- Footer -->
         <footer class="text-center mt-8 text-white/60 text-sm">
             <p>継続は力なり 💪 毎日コツコツ頑張りましょう！</p>
@@ -273,7 +457,8 @@
         // State Management
         const state = {
             records: {}, // { "YYYY-MM-DD": reps }
-            goal: 50,
+            dailyGoal: 50,
+            monthlyGoal: 1500,
             currentMonth: new Date(),
             levels: [
                 { name: '初心者', emoji: '🥚', threshold: 0, desc: '始めたばかり' },
@@ -304,7 +489,8 @@
         const saveState = () => {
             localStorage.setItem('abdominalTrackerState', JSON.stringify({
                 records: state.records,
-                goal: state.goal
+                dailyGoal: state.dailyGoal,
+                monthlyGoal: state.monthlyGoal
             }));
         };
 
@@ -313,7 +499,8 @@
             if (saved) {
                 const data = JSON.parse(saved);
                 state.records = data.records || {};
-                state.goal = data.goal || 50;
+                state.dailyGoal = data.dailyGoal || data.goal || 50; // 後方互換性
+                state.monthlyGoal = data.monthlyGoal || 1500;
             }
         };
 
@@ -415,7 +602,7 @@
                 const dateStr = formatDate(date);
                 const reps = state.records[dateStr];
                 const hasRecord = !!reps;
-                const goalMet = reps >= state.goal;
+                const goalMet = reps >= state.dailyGoal;
 
                 const cell = document.createElement('div');
                 cell.className = `calendar-day rounded-lg cursor-pointer flex flex-col items-center justify-center text-sm font-semibold ${
@@ -466,7 +653,7 @@
 
             const labels = last30Days.map(d => formatDateDisplay(d));
             const data = last30Days.map(d => state.records[d] || 0);
-            const goalLine = new Array(30).fill(state.goal);
+            const goalLine = new Array(30).fill(state.dailyGoal);
 
             const ctx = document.getElementById('performance-chart');
             
@@ -483,12 +670,12 @@
                             label: '腹筋回数',
                             data: data,
                             backgroundColor: data.map(v => 
-                                v >= state.goal 
+                                v >= state.dailyGoal 
                                     ? 'rgba(168, 85, 247, 0.8)' 
                                     : 'rgba(236, 72, 153, 0.6)'
                             ),
                             borderColor: data.map(v => 
-                                v >= state.goal 
+                                v >= state.dailyGoal 
                                     ? 'rgba(168, 85, 247, 1)' 
                                     : 'rgba(236, 72, 153, 1)'
                             ),
@@ -545,7 +732,7 @@
 
             container.innerHTML = sortedDates.map(dateStr => {
                 const reps = state.records[dateStr];
-                const goalMet = reps >= state.goal;
+                const goalMet = reps >= state.dailyGoal;
                 const [y, m, d] = dateStr.split('-');
                 const displayDate = `${y}年${m}月${d}日`;
 
@@ -574,8 +761,43 @@
             renderCalendar();
             renderChart();
             renderRecentRecords();
-            document.getElementById('current-goal').textContent = `${state.goal}回`;
-            document.getElementById('goal-input').value = state.goal;
+            document.getElementById('current-daily-goal').textContent = `${state.dailyGoal}回`;
+            document.getElementById('current-monthly-goal').textContent = `${state.monthlyGoal}回`;
+            document.getElementById('daily-goal-input').value = state.dailyGoal;
+            document.getElementById('monthly-goal-input').value = state.monthlyGoal;
+        };
+
+        // Quick Input Functions
+        const addReps = (amount) => {
+            const input = document.getElementById('reps-input');
+            const currentValue = parseInt(input.value) || 0;
+            const newValue = Math.max(0, currentValue + amount);
+            input.value = newValue;
+        };
+
+        const resetReps = () => {
+            document.getElementById('reps-input').value = '';
+        };
+
+        // Tab Switching
+        const switchTab = (tabName) => {
+            const trackerTab = document.getElementById('tracker-tab');
+            const visualTab = document.getElementById('visual-tab');
+            const trackerBtn = document.getElementById('tab-tracker');
+            const visualBtn = document.getElementById('tab-visual');
+
+            if (tabName === 'tracker') {
+                trackerTab.classList.remove('hidden');
+                visualTab.classList.add('hidden');
+                trackerBtn.classList.add('active');
+                visualBtn.classList.remove('active');
+            } else if (tabName === 'visual') {
+                visualTab.classList.remove('hidden');
+                trackerTab.classList.add('hidden');
+                visualBtn.classList.add('active');
+                trackerBtn.classList.remove('active');
+                updateVisualTab();
+            }
         };
 
         // Event Handlers
@@ -608,14 +830,21 @@
         };
 
         const saveGoal = () => {
-            const goal = parseInt(document.getElementById('goal-input').value, 10);
+            const dailyGoal = parseInt(document.getElementById('daily-goal-input').value, 10);
+            const monthlyGoal = parseInt(document.getElementById('monthly-goal-input').value, 10);
             
-            if (isNaN(goal) || goal <= 0) {
-                alert('正しい目標回数を入力してください');
+            if ((isNaN(dailyGoal) || dailyGoal <= 0) && (isNaN(monthlyGoal) || monthlyGoal <= 0)) {
+                alert('少なくとも1つの目標を入力してください');
                 return;
             }
 
-            state.goal = goal;
+            if (!isNaN(dailyGoal) && dailyGoal > 0) {
+                state.dailyGoal = dailyGoal;
+            }
+            if (!isNaN(monthlyGoal) && monthlyGoal > 0) {
+                state.monthlyGoal = monthlyGoal;
+            }
+            
             saveState();
             render();
 
@@ -656,6 +885,9 @@
             document.getElementById('set-today-btn').addEventListener('click', setToday);
             document.getElementById('prev-month-btn').addEventListener('click', () => changeMonth(-1));
             document.getElementById('next-month-btn').addEventListener('click', () => changeMonth(1));
+            document.getElementById('tab-tracker').addEventListener('click', () => switchTab('tracker'));
+            document.getElementById('tab-visual').addEventListener('click', () => switchTab('visual'));
+            document.getElementById('capture-btn').addEventListener('click', captureScreenshot);
 
             // Enter key support
             document.getElementById('reps-input').addEventListener('keypress', (e) => {
@@ -669,8 +901,109 @@
             render();
         };
 
-        // Make deleteRecord available globally
+        // Visual Tab Update
+        const updateVisualTab = () => {
+            const stats = calculateStats();
+            const { currentLevel, nextLevel, progress } = getCurrentLevel(stats.totalReps);
+            
+            // Update date
+            const now = new Date();
+            document.getElementById('visual-date').textContent = 
+                `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 現在`;
+            
+            // Update stats
+            document.getElementById('visual-streak').textContent = stats.streak;
+            document.getElementById('visual-total-days').textContent = stats.totalDays;
+            document.getElementById('visual-total-reps').textContent = stats.totalReps;
+            document.getElementById('visual-average').textContent = stats.averageReps;
+            
+            // Update level
+            document.getElementById('visual-level-emoji').textContent = currentLevel.emoji;
+            document.getElementById('visual-level-name').textContent = currentLevel.name;
+            document.getElementById('visual-level-desc').textContent = currentLevel.desc;
+            document.getElementById('visual-level-progress').style.width = `${progress}%`;
+            
+            if (nextLevel) {
+                const remaining = nextLevel.threshold - stats.totalReps;
+                document.getElementById('visual-level-progress-text').textContent = 
+                    `次のレベル「${nextLevel.name}」まであと ${remaining} 回`;
+            } else {
+                document.getElementById('visual-level-progress-text').textContent = '最高レベル達成！';
+            }
+            
+            // Calculate monthly stats
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const monthlyReps = Object.keys(state.records)
+                .filter(dateStr => {
+                    const date = new Date(dateStr);
+                    return date.getFullYear() === year && date.getMonth() === month;
+                })
+                .reduce((sum, dateStr) => sum + state.records[dateStr], 0);
+            
+            document.getElementById('visual-month-reps').textContent = monthlyReps;
+            document.getElementById('visual-month-goal').textContent = `${state.monthlyGoal}回`;
+            
+            const monthProgress = Math.min((monthlyReps / state.monthlyGoal) * 100, 100);
+            document.getElementById('visual-month-progress').style.width = `${monthProgress}%`;
+            document.getElementById('visual-month-percent').textContent = 
+                monthProgress >= 10 ? `${monthProgress.toFixed(0)}%` : '';
+            
+            const remaining = Math.max(0, state.monthlyGoal - monthlyReps);
+            if (remaining > 0) {
+                document.getElementById('visual-month-status').textContent = 
+                    `目標達成まであと ${remaining} 回`;
+            } else {
+                document.getElementById('visual-month-status').textContent = 
+                    `🎉 目標達成！ +${monthlyReps - state.monthlyGoal} 回オーバー達成！`;
+            }
+        };
+
+        // Capture Screenshot
+        const captureScreenshot = async () => {
+            const captureArea = document.getElementById('capture-area');
+            const button = document.getElementById('capture-btn');
+            
+            button.textContent = '📸 生成中...';
+            button.disabled = true;
+            
+            try {
+                const canvas = await html2canvas(captureArea, {
+                    backgroundColor: '#ffffff',
+                    scale: 2,
+                    logging: false,
+                    useCORS: true
+                });
+                
+                // Convert to blob and download
+                canvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    const now = new Date();
+                    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+                    link.download = `腹筋進捗_${dateStr}.png`;
+                    link.href = url;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    
+                    button.textContent = '✅ 保存しました！';
+                    setTimeout(() => {
+                        button.textContent = '📸 画像として保存';
+                        button.disabled = false;
+                    }, 2000);
+                });
+            } catch (error) {
+                console.error('Screenshot failed:', error);
+                alert('画像の生成に失敗しました。もう一度お試しください。');
+                button.textContent = '📸 画像として保存';
+                button.disabled = false;
+            }
+        };
+
+        // Make functions available globally
         window.deleteRecord = deleteRecord;
+        window.addReps = addReps;
+        window.resetReps = resetReps;
 
         // Start app
         init();
