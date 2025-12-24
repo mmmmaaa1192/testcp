@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>腹筋ハビットトラッカー</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .calendar-day {
+            aspect-ratio: 1;
+            transition: all 0.3s ease;
+        }
+        .calendar-day:hover {
+            transform: scale(1.05);
+        }
+        .completed {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.8;
+            }
+        }
+        .streak-badge {
+            background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%);
+            box-shadow: 0 4px 15px rgba(255, 167, 38, 0.4);
+        }
+        .stat-card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .glass-card {
+            backdrop-filter: blur(16px) saturate(180%);
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(209, 213, 219, 0.3);
+        }
+        .emoji-rotate {
+            display: inline-block;
+            animation: rotate 3s linear infinite;
+        }
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-8 fade-in">
+            <div class="inline-block mb-4">
+                <span class="text-6xl emoji-rotate">💪</span>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-2 drop-shadow-lg">
+                腹筋ハビットトラッカー
+            </h1>
+            <p class="text-white/80 text-lg">毎日の腹筋を記録して、健康的な習慣を作ろう！</p>
+        </header>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 fade-in">
+            <!-- Streak -->
+            <div class="glass-card rounded-2xl p-6 text-center shadow-xl">
+                <div class="text-4xl mb-2">🔥</div>
+                <div class="text-3xl font-bold text-orange-500" id="streak-count">0</div>
+                <div class="text-sm text-gray-600 font-medium">連続日数</div>
+            </div>
+            
+            <!-- Total Days -->
+            <div class="glass-card rounded-2xl p-6 text-center shadow-xl">
+                <div class="text-4xl mb-2">📅</div>
+                <div class="text-3xl font-bold text-blue-500" id="total-days">0</div>
+                <div class="text-sm text-gray-600 font-medium">累計実施日</div>
+            </div>
+            
+            <!-- Total Reps -->
+            <div class="glass-card rounded-2xl p-6 text-center shadow-xl">
+                <div class="text-4xl mb-2">💯</div>
+                <div class="text-3xl font-bold text-purple-500" id="total-reps">0</div>
+                <div class="text-sm text-gray-600 font-medium">累計回数</div>
+            </div>
+            
+            <!-- Average -->
+            <div class="glass-card rounded-2xl p-6 text-center shadow-xl">
+                <div class="text-4xl mb-2">⭐</div>
+                <div class="text-3xl font-bold text-green-500" id="average-reps">0</div>
+                <div class="text-sm text-gray-600 font-medium">平均回数</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column: Input & Goal -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Input Card -->
+                <div class="glass-card rounded-2xl p-6 shadow-xl fade-in">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <span>📝</span> 今日の記録
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">日付</label>
+                            <input 
+                                type="date" 
+                                id="record-date" 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                            >
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                腹筋回数
+                            </label>
+                            <input 
+                                type="number" 
+                                id="reps-input" 
+                                placeholder="例: 30"
+                                min="1"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg font-semibold"
+                            >
+                        </div>
+                        
+                        <button 
+                            id="save-record-btn"
+                            class="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-6 rounded-xl transition-all transform hover:scale-105 shadow-lg"
+                        >
+                            ✅ 記録する
+                        </button>
+
+                        <button 
+                            id="set-today-btn"
+                            class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                        >
+                            今日の日付に設定
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Goal Card -->
+                <div class="glass-card rounded-2xl p-6 shadow-xl fade-in">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <span>🎯</span> 目標設定
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                1日の目標回数
+                            </label>
+                            <input 
+                                type="number" 
+                                id="goal-input" 
+                                placeholder="例: 50"
+                                min="1"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg font-semibold"
+                            >
+                        </div>
+                        
+                        <button 
+                            id="save-goal-btn"
+                            class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold py-3 px-6 rounded-xl transition-all transform hover:scale-105 shadow-lg"
+                        >
+                            🎯 目標を保存
+                        </button>
+
+                        <div id="goal-display" class="text-center p-3 bg-blue-50 rounded-lg">
+                            <span class="text-sm text-gray-600">現在の目標: </span>
+                            <span class="text-lg font-bold text-blue-600" id="current-goal">未設定</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Level Badge -->
+                <div class="glass-card rounded-2xl p-6 shadow-xl text-center fade-in">
+                    <div class="text-5xl mb-3" id="level-emoji">🥚</div>
+                    <div class="text-2xl font-bold text-gray-800 mb-1" id="level-name">初心者</div>
+                    <div class="text-sm text-gray-600" id="level-desc">始めたばかり</div>
+                    <div class="mt-4">
+                        <div class="bg-gray-200 rounded-full h-3 overflow-hidden">
+                            <div id="level-progress" class="bg-gradient-to-r from-yellow-400 to-orange-500 h-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-2" id="level-progress-text">次のレベルまで: 0/100</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Calendar & Chart -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Calendar -->
+                <div class="glass-card rounded-2xl p-6 shadow-xl fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <span>📆</span> カレンダー
+                        </h2>
+                        <div class="flex gap-2">
+                            <button id="prev-month-btn" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm font-medium">
+                                ◀
+                            </button>
+                            <span id="current-month-display" class="px-4 py-1 font-semibold text-gray-700"></span>
+                            <button id="next-month-btn" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm font-medium">
+                                ▶
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Calendar Grid -->
+                    <div class="grid grid-cols-7 gap-2 mb-2">
+                        <div class="text-center text-xs font-semibold text-red-500">日</div>
+                        <div class="text-center text-xs font-semibold text-gray-600">月</div>
+                        <div class="text-center text-xs font-semibold text-gray-600">火</div>
+                        <div class="text-center text-xs font-semibold text-gray-600">水</div>
+                        <div class="text-center text-xs font-semibold text-gray-600">木</div>
+                        <div class="text-center text-xs font-semibold text-gray-600">金</div>
+                        <div class="text-center text-xs font-semibold text-blue-500">土</div>
+                    </div>
+                    
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-2">
+                        <!-- Calendar days will be generated here -->
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="glass-card rounded-2xl p-6 shadow-xl fade-in">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <span>📊</span> 実績グラフ（直近30日）
+                    </h2>
+                    <div class="h-64">
+                        <canvas id="performance-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Records -->
+                <div class="glass-card rounded-2xl p-6 shadow-xl fade-in">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <span>📋</span> 最近の記録
+                    </h2>
+                    <div id="recent-records" class="space-y-2 max-h-64 overflow-y-auto">
+                        <p class="text-gray-400 text-center py-4">まだ記録がありません</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center mt-8 text-white/60 text-sm">
+            <p>継続は力なり 💪 毎日コツコツ頑張りましょう！</p>
+        </footer>
+    </div>
+
+    <script>
+        // State Management
+        const state = {
+            records: {}, // { "YYYY-MM-DD": reps }
+            goal: 50,
+            currentMonth: new Date(),
+            levels: [
+                { name: '初心者', emoji: '🥚', threshold: 0, desc: '始めたばかり' },
+                { name: '見習い', emoji: '🐣', threshold: 100, desc: '習慣化の第一歩' },
+                { name: '中級者', emoji: '🐥', threshold: 300, desc: '継続できている' },
+                { name: '上級者', emoji: '🦅', threshold: 700, desc: '素晴らしい継続力' },
+                { name: 'エキスパート', emoji: '🦸', threshold: 1500, desc: '腹筋マスター' },
+                { name: 'レジェンド', emoji: '👑', threshold: 3000, desc: '伝説の域' },
+                { name: '神', emoji: '✨', threshold: 5000, desc: '腹筋の神' }
+            ]
+        };
+
+        let chartInstance = null;
+
+        // Utility Functions
+        const formatDate = (date) => {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        };
+
+        const formatDateDisplay = (dateStr) => {
+            const [y, m, d] = dateStr.split('-');
+            return `${m}/${d}`;
+        };
+
+        const saveState = () => {
+            localStorage.setItem('abdominalTrackerState', JSON.stringify({
+                records: state.records,
+                goal: state.goal
+            }));
+        };
+
+        const loadState = () => {
+            const saved = localStorage.getItem('abdominalTrackerState');
+            if (saved) {
+                const data = JSON.parse(saved);
+                state.records = data.records || {};
+                state.goal = data.goal || 50;
+            }
+        };
+
+        // Statistics Calculation
+        const calculateStats = () => {
+            const dates = Object.keys(state.records).sort();
+            const totalDays = dates.length;
+            const totalReps = Object.values(state.records).reduce((sum, reps) => sum + reps, 0);
+            const averageReps = totalDays > 0 ? Math.round(totalReps / totalDays) : 0;
+
+            // Calculate streak
+            let streak = 0;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            let checkDate = new Date(today);
+            while (true) {
+                const dateStr = formatDate(checkDate);
+                if (state.records[dateStr]) {
+                    streak++;
+                    checkDate.setDate(checkDate.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+
+            return { totalDays, totalReps, averageReps, streak };
+        };
+
+        const getCurrentLevel = (totalReps) => {
+            let currentLevel = state.levels[0];
+            let nextLevel = state.levels[1];
+
+            for (let i = state.levels.length - 1; i >= 0; i--) {
+                if (totalReps >= state.levels[i].threshold) {
+                    currentLevel = state.levels[i];
+                    nextLevel = state.levels[i + 1] || null;
+                    break;
+                }
+            }
+
+            const progress = nextLevel 
+                ? ((totalReps - currentLevel.threshold) / (nextLevel.threshold - currentLevel.threshold)) * 100
+                : 100;
+
+            return { currentLevel, nextLevel, progress };
+        };
+
+        // UI Update Functions
+        const updateStats = () => {
+            const stats = calculateStats();
+            
+            document.getElementById('streak-count').textContent = stats.streak;
+            document.getElementById('total-days').textContent = stats.totalDays;
+            document.getElementById('total-reps').textContent = stats.totalReps;
+            document.getElementById('average-reps').textContent = stats.averageReps;
+
+            // Update level
+            const { currentLevel, nextLevel, progress } = getCurrentLevel(stats.totalReps);
+            document.getElementById('level-emoji').textContent = currentLevel.emoji;
+            document.getElementById('level-name').textContent = currentLevel.name;
+            document.getElementById('level-desc').textContent = currentLevel.desc;
+            document.getElementById('level-progress').style.width = `${progress}%`;
+            
+            if (nextLevel) {
+                const remaining = nextLevel.threshold - stats.totalReps;
+                document.getElementById('level-progress-text').textContent = 
+                    `次のレベル「${nextLevel.name}」まであと ${remaining} 回`;
+            } else {
+                document.getElementById('level-progress-text').textContent = '最高レベル達成！';
+            }
+        };
+
+        const renderCalendar = () => {
+            const year = state.currentMonth.getFullYear();
+            const month = state.currentMonth.getMonth();
+            
+            document.getElementById('current-month-display').textContent = 
+                `${year}年${month + 1}月`;
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDay = firstDay.getDay();
+            const daysInMonth = lastDay.getDate();
+
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+
+            // Empty cells before first day
+            for (let i = 0; i < startDay; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'calendar-day bg-gray-100 rounded-lg';
+                grid.appendChild(cell);
+            }
+
+            // Days of month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const dateStr = formatDate(date);
+                const reps = state.records[dateStr];
+                const hasRecord = !!reps;
+                const goalMet = reps >= state.goal;
+
+                const cell = document.createElement('div');
+                cell.className = `calendar-day rounded-lg cursor-pointer flex flex-col items-center justify-center text-sm font-semibold ${
+                    hasRecord 
+                        ? (goalMet ? 'completed text-white' : 'bg-pink-200 text-pink-800')
+                        : 'bg-white hover:bg-gray-50'
+                }`;
+                
+                const dayNum = document.createElement('div');
+                dayNum.textContent = day;
+                cell.appendChild(dayNum);
+
+                if (hasRecord) {
+                    const repsDiv = document.createElement('div');
+                    repsDiv.className = 'text-xs opacity-90 mt-1';
+                    repsDiv.textContent = `${reps}回`;
+                    cell.appendChild(repsDiv);
+
+                    if (goalMet) {
+                        const star = document.createElement('div');
+                        star.textContent = '⭐';
+                        star.className = 'text-xs';
+                        cell.appendChild(star);
+                    }
+                }
+
+                cell.addEventListener('click', () => {
+                    document.getElementById('record-date').value = dateStr;
+                    if (hasRecord) {
+                        document.getElementById('reps-input').value = reps;
+                    }
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+
+                grid.appendChild(cell);
+            }
+        };
+
+        const renderChart = () => {
+            const today = new Date();
+            const last30Days = [];
+            
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                last30Days.push(formatDate(date));
+            }
+
+            const labels = last30Days.map(d => formatDateDisplay(d));
+            const data = last30Days.map(d => state.records[d] || 0);
+            const goalLine = new Array(30).fill(state.goal);
+
+            const ctx = document.getElementById('performance-chart');
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '腹筋回数',
+                            data: data,
+                            backgroundColor: data.map(v => 
+                                v >= state.goal 
+                                    ? 'rgba(168, 85, 247, 0.8)' 
+                                    : 'rgba(236, 72, 153, 0.6)'
+                            ),
+                            borderColor: data.map(v => 
+                                v >= state.goal 
+                                    ? 'rgba(168, 85, 247, 1)' 
+                                    : 'rgba(236, 72, 153, 1)'
+                            ),
+                            borderWidth: 2,
+                            borderRadius: 6
+                        },
+                        {
+                            label: '目標ライン',
+                            data: goalLine,
+                            type: 'line',
+                            borderColor: 'rgba(59, 130, 246, 0.8)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        const renderRecentRecords = () => {
+            const container = document.getElementById('recent-records');
+            const sortedDates = Object.keys(state.records).sort().reverse().slice(0, 10);
+
+            if (sortedDates.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-4">まだ記録がありません</p>';
+                return;
+            }
+
+            container.innerHTML = sortedDates.map(dateStr => {
+                const reps = state.records[dateStr];
+                const goalMet = reps >= state.goal;
+                const [y, m, d] = dateStr.split('-');
+                const displayDate = `${y}年${m}月${d}日`;
+
+                return `
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">${goalMet ? '⭐' : '💪'}</span>
+                            <div>
+                                <div class="font-semibold text-gray-800">${displayDate}</div>
+                                <div class="text-sm text-gray-500">${reps}回 ${goalMet ? '(目標達成!)' : ''}</div>
+                            </div>
+                        </div>
+                        <button 
+                            onclick="deleteRecord('${dateStr}')"
+                            class="text-red-500 hover:text-red-700 text-sm font-medium px-3 py-1 rounded hover:bg-red-50 transition"
+                        >
+                            削除
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        const render = () => {
+            updateStats();
+            renderCalendar();
+            renderChart();
+            renderRecentRecords();
+            document.getElementById('current-goal').textContent = `${state.goal}回`;
+            document.getElementById('goal-input').value = state.goal;
+        };
+
+        // Event Handlers
+        const saveRecord = () => {
+            const dateStr = document.getElementById('record-date').value;
+            const reps = parseInt(document.getElementById('reps-input').value, 10);
+
+            if (!dateStr) {
+                alert('日付を選択してください');
+                return;
+            }
+
+            if (isNaN(reps) || reps <= 0) {
+                alert('正しい回数を入力してください');
+                return;
+            }
+
+            state.records[dateStr] = reps;
+            saveState();
+            render();
+            
+            document.getElementById('reps-input').value = '';
+            
+            // Success animation
+            const btn = document.getElementById('save-record-btn');
+            btn.textContent = '✅ 保存しました！';
+            setTimeout(() => {
+                btn.textContent = '✅ 記録する';
+            }, 2000);
+        };
+
+        const saveGoal = () => {
+            const goal = parseInt(document.getElementById('goal-input').value, 10);
+            
+            if (isNaN(goal) || goal <= 0) {
+                alert('正しい目標回数を入力してください');
+                return;
+            }
+
+            state.goal = goal;
+            saveState();
+            render();
+
+            const btn = document.getElementById('save-goal-btn');
+            btn.textContent = '✅ 保存しました！';
+            setTimeout(() => {
+                btn.textContent = '🎯 目標を保存';
+            }, 2000);
+        };
+
+        const deleteRecord = (dateStr) => {
+            if (confirm(`${dateStr}の記録を削除しますか？`)) {
+                delete state.records[dateStr];
+                saveState();
+                render();
+            }
+        };
+
+        const changeMonth = (delta) => {
+            state.currentMonth.setMonth(state.currentMonth.getMonth() + delta);
+            renderCalendar();
+        };
+
+        const setToday = () => {
+            document.getElementById('record-date').value = formatDate(new Date());
+        };
+
+        // Initialize
+        const init = () => {
+            loadState();
+            
+            // Set today's date
+            document.getElementById('record-date').value = formatDate(new Date());
+
+            // Event Listeners
+            document.getElementById('save-record-btn').addEventListener('click', saveRecord);
+            document.getElementById('save-goal-btn').addEventListener('click', saveGoal);
+            document.getElementById('set-today-btn').addEventListener('click', setToday);
+            document.getElementById('prev-month-btn').addEventListener('click', () => changeMonth(-1));
+            document.getElementById('next-month-btn').addEventListener('click', () => changeMonth(1));
+
+            // Enter key support
+            document.getElementById('reps-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') saveRecord();
+            });
+            document.getElementById('goal-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') saveGoal();
+            });
+
+            // Initial render
+            render();
+        };
+
+        // Make deleteRecord available globally
+        window.deleteRecord = deleteRecord;
+
+        // Start app
+        init();
+    </script>
+</body>
+</html>
