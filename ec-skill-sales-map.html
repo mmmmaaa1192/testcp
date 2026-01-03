@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECスキルマップ × 売上構造可視化</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .skill-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .skill-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .skill-card.active {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+        }
+        .sales-node {
+            transition: all 0.3s ease;
+        }
+        .sales-node.highlight {
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.8));
+        }
+        .connection-line {
+            stroke-dasharray: 5,5;
+            animation: dash 1s linear infinite;
+        }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -10;
+            }
+        }
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .5;
+            }
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-2 drop-shadow-lg">
+                ECスキルマップ × 売上構造可視化
+            </h1>
+            <p class="text-white/90 text-lg">担当者のスキルと売上構造の関係を可視化</p>
+        </header>
+
+        <!-- Main Container -->
+        <div class="bg-white rounded-3xl shadow-2xl p-6 md:p-8">
+            <!-- Skill Map Section -->
+            <section class="mb-12">
+                <h2 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                    <span class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg">スキルマップ</span>
+                </h2>
+                
+                <!-- Skill Cards Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+                    <div class="skill-card bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-4 text-center" 
+                         data-skill="seo" 
+                         data-impacts='["集客", "認知"]'>
+                        <div class="text-3xl mb-2">🔍</div>
+                        <div class="font-bold text-blue-800 text-sm">SEO</div>
+                        <div class="text-xs text-blue-600 mt-1">検索最適化</div>
+                    </div>
+                    <div class="skill-card bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl p-4 text-center" 
+                         data-skill="advertising" 
+                         data-impacts='["集客", "認知"]'>
+                        <div class="text-3xl mb-2">📢</div>
+                        <div class="font-bold text-purple-800 text-sm">広告運用</div>
+                        <div class="text-xs text-purple-600 mt-1">PPC/広告</div>
+                    </div>
+                    <div class="skill-card bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-xl p-4 text-center" 
+                         data-skill="content" 
+                         data-impacts='["認知", "集客", "転換"]'>
+                        <div class="text-3xl mb-2">✍️</div>
+                        <div class="font-bold text-green-800 text-sm">コンテンツ</div>
+                        <div class="text-xs text-green-600 mt-1">制作・企画</div>
+                    </div>
+                    <div class="skill-card bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-200 rounded-xl p-4 text-center" 
+                         data-skill="cro" 
+                         data-impacts='["転換", "客単価"]'>
+                        <div class="text-3xl mb-2">📈</div>
+                        <div class="font-bold text-red-800 text-sm">CRO</div>
+                        <div class="text-xs text-red-600 mt-1">転換最適化</div>
+                    </div>
+                    <div class="skill-card bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-yellow-200 rounded-xl p-4 text-center" 
+                         data-skill="analytics" 
+                         data-impacts='["全指標"]'>
+                        <div class="text-3xl mb-2">📊</div>
+                        <div class="font-bold text-yellow-800 text-sm">データ分析</div>
+                        <div class="text-xs text-yellow-600 mt-1">分析・改善</div>
+                    </div>
+                    <div class="skill-card bg-gradient-to-br from-indigo-50 to-indigo-100 border-2 border-indigo-200 rounded-xl p-4 text-center" 
+                         data-skill="crm" 
+                         data-impacts='["リピート", "LTV"]'>
+                        <div class="text-3xl mb-2">👥</div>
+                        <div class="font-bold text-indigo-800 text-sm">CRM</div>
+                        <div class="text-xs text-indigo-600 mt-1">顧客管理</div>
+                    </div>
+                    <div class="skill-card bg-gradient-to-br from-pink-50 to-pink-100 border-2 border-pink-200 rounded-xl p-4 text-center" 
+                         data-skill="automation" 
+                         data-impacts='["リピート", "効率化"]'>
+                        <div class="text-3xl mb-2">⚙️</div>
+                        <div class="font-bold text-pink-800 text-sm">MA</div>
+                        <div class="text-xs text-pink-600 mt-1">自動化</div>
+                    </div>
+                    <div class="skill-card bg-gradient-to-br from-teal-50 to-teal-100 border-2 border-teal-200 rounded-xl p-4 text-center" 
+                         data-skill="sns" 
+                         data-impacts='["認知", "集客"]'>
+                        <div class="text-3xl mb-2">📱</div>
+                        <div class="font-bold text-teal-800 text-sm">SNS運用</div>
+                        <div class="text-xs text-teal-600 mt-1">ソーシャル</div>
+                    </div>
+                    <div class="skill-card bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200 rounded-xl p-4 text-center" 
+                         data-skill="uiux" 
+                         data-impacts='["転換", "体験"]'>
+                        <div class="text-3xl mb-2">🎨</div>
+                        <div class="font-bold text-orange-800 text-sm">UI/UX</div>
+                        <div class="text-xs text-orange-600 mt-1">デザイン</div>
+                    </div>
+                    <div class="skill-card bg-gradient-to-br from-cyan-50 to-cyan-100 border-2 border-cyan-200 rounded-xl p-4 text-center" 
+                         data-skill="email" 
+                         data-impacts='["リピート", "転換"]'>
+                        <div class="text-3xl mb-2">📧</div>
+                        <div class="font-bold text-cyan-800 text-sm">メール</div>
+                        <div class="text-xs text-cyan-600 mt-1">マーケティング</div>
+                    </div>
+                    <div class="skill-card bg-gradient-to-br from-amber-50 to-amber-100 border-2 border-amber-200 rounded-xl p-4 text-center" 
+                         data-skill="influencer" 
+                         data-impacts='["認知", "集客"]'>
+                        <div class="text-3xl mb-2">⭐</div>
+                        <div class="font-bold text-amber-800 text-sm">インフル</div>
+                        <div class="text-xs text-amber-600 mt-1">エンサー</div>
+                    </div>
+                    <div class="skill-card bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 rounded-xl p-4 text-center" 
+                         data-skill="strategy" 
+                         data-impacts='["全指標"]'>
+                        <div class="text-3xl mb-2">🎯</div>
+                        <div class="font-bold text-gray-800 text-sm">戦略</div>
+                        <div class="text-xs text-gray-600 mt-1">企画・立案</div>
+                    </div>
+                </div>
+
+                <!-- Radar Chart -->
+                <div class="bg-slate-50 rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-slate-700">スキルレベル（レーダーチャート）</h3>
+                        <button id="editSkillsBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            ✏️ スキルレベルを編集
+                        </button>
+                    </div>
+                    <div class="h-80">
+                        <canvas id="skillRadarChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Skill Level Editor Modal -->
+                <div id="skillEditorModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-2xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-2xl font-bold text-slate-800">スキルレベル編集</h3>
+                            <button id="closeEditorBtn" class="text-slate-500 hover:text-slate-700 text-2xl">&times;</button>
+                        </div>
+                        <div id="skillEditorContent" class="space-y-4">
+                            <!-- Skill sliders will be generated here -->
+                        </div>
+                        <div class="mt-6 flex gap-4">
+                            <button id="saveSkillsBtn" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                                保存
+                            </button>
+                            <button id="cancelEditBtn" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 px-6 rounded-lg transition-colors">
+                                キャンセル
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sales Structure Tree Section -->
+            <section class="mb-12">
+                <h2 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                    <span class="bg-gradient-to-r from-green-500 to-teal-600 text-white px-4 py-2 rounded-lg">売上構造ツリー</span>
+                </h2>
+                
+                <!-- Sales Flow Visualization -->
+                <div class="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-8 relative overflow-hidden">
+                    <svg id="salesFlowSvg" class="w-full h-auto min-h-[600px]" style="max-width: 100%;">
+                        <!-- Connection lines will be drawn here -->
+                    </svg>
+                    
+                    <!-- Sales Nodes -->
+                    <div class="absolute inset-0 p-8">
+                        <!-- Level 1: 認知 -->
+                        <div class="sales-node absolute top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-br from-blue-400 to-blue-600 text-white rounded-xl p-4 shadow-lg min-w-[120px] text-center" 
+                             data-node="認知">
+                            <div class="font-bold text-lg mb-1">認知</div>
+                            <div class="text-sm opacity-90">Awareness</div>
+                            <div class="text-xs mt-2 bg-white/20 rounded px-2 py-1">訪問者: 10,000人</div>
+                        </div>
+
+                        <!-- Level 2: 集客 -->
+                        <div class="sales-node absolute top-32 left-[15%] transform -translate-x-1/2 bg-gradient-to-br from-purple-400 to-purple-600 text-white rounded-xl p-4 shadow-lg min-w-[120px] text-center" 
+                             data-node="集客">
+                            <div class="font-bold text-lg mb-1">集客</div>
+                            <div class="text-sm opacity-90">Acquisition</div>
+                            <div class="text-xs mt-2 bg-white/20 rounded px-2 py-1">訪問: 8,000人</div>
+                        </div>
+
+                        <!-- Level 2: 認知維持 -->
+                        <div class="sales-node absolute top-32 right-[15%] transform translate-x-1/2 bg-gradient-to-br from-cyan-400 to-cyan-600 text-white rounded-xl p-4 shadow-lg min-w-[120px] text-center" 
+                             data-node="認知維持">
+                            <div class="font-bold text-lg mb-1">認知維持</div>
+                            <div class="text-sm opacity-90">Retention</div>
+                            <div class="text-xs mt-2 bg-white/20 rounded px-2 py-1">リピーター: 2,000人</div>
+                        </div>
+
+                        <!-- Level 3: 転換 -->
+                        <div class="sales-node absolute top-56 left-[25%] transform -translate-x-1/2 bg-gradient-to-br from-green-400 to-green-600 text-white rounded-xl p-4 shadow-lg min-w-[120px] text-center" 
+                             data-node="転換">
+                            <div class="font-bold text-lg mb-1">転換</div>
+                            <div class="text-sm opacity-90">Conversion</div>
+                            <div class="text-xs mt-2 bg-white/20 rounded px-2 py-1">購入: 400人</div>
+                            <div class="text-xs mt-1 bg-white/20 rounded px-2 py-1">CVR: 5%</div>
+                        </div>
+
+                        <!-- Level 3: 客単価向上 -->
+                        <div class="sales-node absolute top-56 left-[50%] transform -translate-x-1/2 bg-gradient-to-br from-yellow-400 to-yellow-600 text-white rounded-xl p-4 shadow-lg min-w-[120px] text-center" 
+                             data-node="客単価">
+                            <div class="font-bold text-lg mb-1">客単価向上</div>
+                            <div class="text-sm opacity-90">AOV</div>
+                            <div class="text-xs mt-2 bg-white/20 rounded px-2 py-1">平均: ¥5,000</div>
+                        </div>
+
+                        <!-- Level 3: リピート -->
+                        <div class="sales-node absolute top-56 right-[25%] transform translate-x-1/2 bg-gradient-to-br from-red-400 to-red-600 text-white rounded-xl p-4 shadow-lg min-w-[120px] text-center" 
+                             data-node="リピート">
+                            <div class="font-bold text-lg mb-1">リピート</div>
+                            <div class="text-sm opacity-90">Repeat</div>
+                            <div class="text-xs mt-2 bg-white/20 rounded px-2 py-1">リピート率: 30%</div>
+                        </div>
+
+                        <!-- Level 4: LTV向上 -->
+                        <div class="sales-node absolute bottom-32 left-1/2 transform -translate-x-1/2 bg-gradient-to-br from-indigo-400 to-indigo-600 text-white rounded-xl p-4 shadow-lg min-w-[140px] text-center" 
+                             data-node="LTV">
+                            <div class="font-bold text-lg mb-1">LTV向上</div>
+                            <div class="text-sm opacity-90">Lifetime Value</div>
+                            <div class="text-xs mt-2 bg-white/20 rounded px-2 py-1">LTV: ¥15,000</div>
+                        </div>
+
+                        <!-- Final: 総売上 -->
+                        <div class="sales-node absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-br from-pink-500 to-rose-600 text-white rounded-xl p-6 shadow-2xl min-w-[180px] text-center pulse-animation" 
+                             data-node="総売上">
+                            <div class="font-bold text-2xl mb-2">総売上</div>
+                            <div class="text-lg opacity-90 mb-2">Total Sales</div>
+                            <div class="text-2xl font-bold bg-white/30 rounded px-4 py-2">¥2,000,000</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Impact Explanation -->
+            <section class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border-2 border-blue-200">
+                <h3 class="text-xl font-bold text-slate-800 mb-4">スキルと売上構造の関係</h3>
+                <div id="impactExplanation" class="text-slate-700">
+                    <p class="text-lg">スキルカードをクリックすると、そのスキルが影響する売上構造の指標がハイライト表示されます。</p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        // Skill data
+        const skills = {
+            seo: { name: 'SEO', level: 75, impacts: ['集客', '認知'] },
+            advertising: { name: '広告運用', level: 80, impacts: ['集客', '認知'] },
+            content: { name: 'コンテンツ', level: 70, impacts: ['認知', '集客', '転換'] },
+            cro: { name: 'CRO', level: 65, impacts: ['転換', '客単価'] },
+            analytics: { name: 'データ分析', level: 85, impacts: ['全指標'] },
+            crm: { name: 'CRM', level: 60, impacts: ['リピート', 'LTV'] },
+            automation: { name: 'MA', level: 55, impacts: ['リピート', '効率化'] },
+            sns: { name: 'SNS運用', level: 70, impacts: ['認知', '集客'] },
+            uiux: { name: 'UI/UX', level: 68, impacts: ['転換', '体験'] },
+            email: { name: 'メール', level: 72, impacts: ['リピート', '転換'] },
+            influencer: { name: 'インフルエンサー', level: 50, impacts: ['認知', '集客'] },
+            strategy: { name: '戦略', level: 78, impacts: ['全指標'] }
+        };
+
+        // Initialize Radar Chart
+        let radarChart = null;
+        const initRadarChart = () => {
+            const ctx = document.getElementById('skillRadarChart').getContext('2d');
+            const skillNames = Object.keys(skills);
+            const skillLevels = skillNames.map(key => skills[key].level);
+
+            if (radarChart) {
+                radarChart.destroy();
+            }
+
+            radarChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: skillNames.map(key => skills[key].name),
+                    datasets: [{
+                        label: 'スキルレベル',
+                        data: skillLevels,
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        pointBackgroundColor: Array(skillLevels.length).fill('rgb(59, 130, 246)'),
+                        pointBorderColor: Array(skillLevels.length).fill('#fff'),
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 2,
+                        pointRadius: Array(skillLevels.length).fill(5),
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                stepSize: 20,
+                                font: {
+                                    size: 11
+                                }
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.r + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        // Draw connection lines based on actual node positions
+        const drawConnections = () => {
+            const svg = document.getElementById('salesFlowSvg');
+            const container = svg.parentElement;
+            const containerRect = container.getBoundingClientRect();
+            
+            // Wait for layout to settle
+            setTimeout(() => {
+                svg.innerHTML = '';
+                svg.setAttribute('viewBox', `0 0 ${containerRect.width} ${containerRect.height}`);
+                svg.setAttribute('width', containerRect.width);
+                svg.setAttribute('height', containerRect.height);
+
+                const getNodeCenter = (nodeName) => {
+                    const node = document.querySelector(`[data-node="${nodeName}"]`);
+                    if (!node) return null;
+                    const rect = node.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+                    return {
+                        x: rect.left + rect.width / 2 - containerRect.left,
+                        y: rect.top + rect.height / 2 - containerRect.top
+                    };
+                };
+
+                const connections = [
+                    { from: '認知', to: '集客' },
+                    { from: '認知', to: '認知維持' },
+                    { from: '集客', to: '転換' },
+                    { from: '集客', to: '客単価' },
+                    { from: '認知維持', to: 'リピート' },
+                    { from: '転換', to: 'LTV' },
+                    { from: '客単価', to: 'LTV' },
+                    { from: 'リピート', to: 'LTV' },
+                    { from: 'LTV', to: '総売上' }
+                ];
+
+                connections.forEach(conn => {
+                    const fromPos = getNodeCenter(conn.from);
+                    const toPos = getNodeCenter(conn.to);
+                    
+                    if (fromPos && toPos) {
+                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        line.setAttribute('x1', fromPos.x);
+                        line.setAttribute('y1', fromPos.y);
+                        line.setAttribute('x2', toPos.x);
+                        line.setAttribute('y2', toPos.y);
+                        line.setAttribute('stroke', '#94a3b8');
+                        line.setAttribute('stroke-width', '2');
+                        line.setAttribute('class', 'connection-line');
+                        line.setAttribute('data-from', conn.from);
+                        line.setAttribute('data-to', conn.to);
+                        line.style.opacity = '0.6';
+                        svg.appendChild(line);
+                    }
+                });
+            }, 100);
+        };
+
+        // Handle skill card click
+        let selectedSkill = null;
+        const skillCards = document.querySelectorAll('.skill-card');
+        skillCards.forEach(card => {
+            card.addEventListener('click', function() {
+                // Remove active class from all cards
+                skillCards.forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked card
+                this.classList.add('active');
+                
+                const skillKey = this.getAttribute('data-skill');
+                selectedSkill = skillKey;
+                const skill = skills[skillKey];
+                const impacts = JSON.parse(this.getAttribute('data-impacts'));
+                
+                // Highlight sales nodes
+                highlightSalesNodes(impacts);
+                
+                // Update explanation
+                updateImpactExplanation(skill, impacts);
+                
+                // Highlight skill in radar chart
+                highlightSkillInRadar(skillKey);
+            });
+        });
+
+        // Highlight selected skill in radar chart
+        const highlightSkillInRadar = (skillKey) => {
+            if (!radarChart) return;
+            
+            const skillIndex = Object.keys(skills).indexOf(skillKey);
+            const datasets = radarChart.data.datasets;
+            
+            // Reset all points
+            datasets.forEach(dataset => {
+                dataset.pointBackgroundColor = Array(dataset.data.length).fill('rgb(59, 130, 246)');
+                dataset.pointBorderColor = Array(dataset.data.length).fill('#fff');
+            });
+            
+            // Highlight selected skill
+            if (skillIndex >= 0) {
+                datasets[0].pointBackgroundColor[skillIndex] = '#f59e0b';
+                datasets[0].pointBorderColor[skillIndex] = '#fff';
+                datasets[0].pointRadius[skillIndex] = 8;
+            }
+            
+            radarChart.update();
+        };
+
+        // Highlight sales nodes based on impacts
+        const highlightSalesNodes = (impacts) => {
+            const nodes = document.querySelectorAll('.sales-node');
+            const lines = document.querySelectorAll('.connection-line');
+            
+            // Reset all nodes and lines
+            nodes.forEach(node => {
+                node.classList.remove('highlight');
+            });
+            lines.forEach(line => {
+                line.setAttribute('stroke', '#94a3b8');
+                line.setAttribute('stroke-width', '2');
+                line.style.opacity = '0.6';
+            });
+            
+            // Highlight impacted nodes
+            nodes.forEach(node => {
+                const nodeName = node.getAttribute('data-node');
+                if (impacts.includes('全指標') || impacts.includes(nodeName)) {
+                    node.classList.add('highlight');
+                    
+                    // Highlight connected lines
+                    lines.forEach(line => {
+                        const from = line.getAttribute('data-from');
+                        const to = line.getAttribute('data-to');
+                        if (from === nodeName || to === nodeName) {
+                            line.setAttribute('stroke', '#3b82f6');
+                            line.setAttribute('stroke-width', '3');
+                            line.style.opacity = '1';
+                        }
+                    });
+                }
+            });
+        };
+
+        // Update impact explanation
+        const updateImpactExplanation = (skill, impacts) => {
+            const explanation = document.getElementById('impactExplanation');
+            const impactList = impacts.includes('全指標') 
+                ? 'すべての指標（認知、集客、転換、客単価、リピート、LTV）'
+                : impacts.join('、');
+            
+            const impactDescriptions = {
+                '認知': 'ブランドや商品の認知度を高め、潜在顧客のプールを拡大します。',
+                '集客': 'サイトへの訪問者数を増やし、トラフィックを拡大します。',
+                '転換': '訪問者を購入者に転換する割合を向上させます。',
+                '客単価': '1回の購入あたりの平均金額を引き上げます。',
+                'リピート': '顧客の再購入率を高め、継続的な購入を促進します。',
+                'LTV': '顧客の生涯価値を最大化し、長期的な収益を向上させます。',
+                '認知維持': '既存顧客のブランド認知を維持し、リピート購入の基盤を作ります。',
+                '体験': '顧客体験を向上させ、満足度とロイヤルティを高めます。',
+                '効率化': '業務効率を向上させ、より多くの施策にリソースを割けます。'
+            };
+            
+            explanation.innerHTML = `
+                <div class="bg-white rounded-lg p-4 shadow-sm">
+                    <h4 class="font-bold text-lg mb-2 text-blue-600">${skill.name}スキルの影響範囲</h4>
+                    <p class="mb-2">このスキルは以下の売上構造指標に直接的な影響を与えます：</p>
+                    <ul class="list-disc list-inside space-y-2 text-slate-600 mb-3">
+                        ${impacts.includes('全指標') 
+                            ? '<li><strong>すべての指標</strong> - 戦略的スキルとして、売上構造全体に影響を与えます</li>'
+                            : impacts.map(impact => {
+                                const desc = impactDescriptions[impact] || '売上構造のこの部分を強化します';
+                                return `<li><strong>${impact}</strong> - ${desc}</li>`;
+                            }).join('')
+                        }
+                    </ul>
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
+                        <p class="text-sm text-blue-800">
+                            💡 <strong>スキルレベル: ${skill.level}%</strong><br>
+                            スキルレベルを向上させることで、関連する指標の改善が期待できます。現在のレベルでは、${skill.level >= 70 ? '高い' : skill.level >= 50 ? '中程度の' : '低い'}効果が期待できます。
+                        </p>
+                    </div>
+                </div>
+            `;
+        };
+
+        // Skill Editor Functions
+        const openSkillEditor = () => {
+            const modal = document.getElementById('skillEditorModal');
+            const content = document.getElementById('skillEditorContent');
+            content.innerHTML = '';
+            
+            Object.keys(skills).forEach(key => {
+                const skill = skills[key];
+                const div = document.createElement('div');
+                div.className = 'bg-slate-50 rounded-lg p-4';
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="font-bold text-slate-700">${skill.name}</label>
+                        <span class="text-blue-600 font-bold text-lg" id="skill-value-${key}">${skill.level}%</span>
+                    </div>
+                    <input 
+                        type="range" 
+                        min="0" 
+                        max="100" 
+                        value="${skill.level}" 
+                        class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                        id="skill-slider-${key}"
+                        data-skill="${key}"
+                    />
+                `;
+                content.appendChild(div);
+                
+                const slider = div.querySelector(`#skill-slider-${key}`);
+                const valueDisplay = div.querySelector(`#skill-value-${key}`);
+                slider.addEventListener('input', (e) => {
+                    valueDisplay.textContent = e.target.value + '%';
+                });
+            });
+            
+            modal.classList.remove('hidden');
+        };
+
+        const closeSkillEditor = () => {
+            document.getElementById('skillEditorModal').classList.add('hidden');
+        };
+
+        const saveSkillLevels = () => {
+            Object.keys(skills).forEach(key => {
+                const slider = document.getElementById(`skill-slider-${key}`);
+                if (slider) {
+                    skills[key].level = parseInt(slider.value);
+                }
+            });
+            initRadarChart();
+            closeSkillEditor();
+        };
+
+        // Update connections on window resize
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                drawConnections();
+            }, 250);
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initRadarChart();
+            
+            // Draw connections after a short delay to ensure layout is complete
+            setTimeout(() => {
+                drawConnections();
+            }, 200);
+            
+            // Skill editor event listeners
+            document.getElementById('editSkillsBtn').addEventListener('click', openSkillEditor);
+            document.getElementById('closeEditorBtn').addEventListener('click', closeSkillEditor);
+            document.getElementById('cancelEditBtn').addEventListener('click', closeSkillEditor);
+            document.getElementById('saveSkillsBtn').addEventListener('click', saveSkillLevels);
+            
+            // Close modal on background click
+            document.getElementById('skillEditorModal').addEventListener('click', (e) => {
+                if (e.target.id === 'skillEditorModal') {
+                    closeSkillEditor();
+                }
+            });
+            
+            // Initial explanation
+            document.getElementById('impactExplanation').innerHTML = `
+                <p class="text-lg">スキルカードをクリックすると、そのスキルが影響する売上構造の指標がハイライト表示されます。</p>
+            `;
+        });
+    </script>
+</body>
+</html>
