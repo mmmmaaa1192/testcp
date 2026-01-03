@@ -1,0 +1,995 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ECスキルマップ × 売上構造ツリー（可視化）</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root { color-scheme: light; }
+    body { font-family: Inter, "Noto Sans JP", system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    .glass {
+      background: rgba(255,255,255,.72);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .node-pill {
+      stroke: rgba(15, 23, 42, .08);
+      filter: drop-shadow(0 10px 14px rgba(2,6,23,.10));
+    }
+    .node-pill.is-dim { opacity: .18; filter: none; }
+    .node-pill.is-highlight { stroke: rgba(37, 99, 235, .55); }
+    .link-line { stroke: rgba(148,163,184,.8); }
+    .link-line.is-dim { opacity: .15; }
+    .link-line.is-highlight { stroke: rgba(37, 99, 235, .55); opacity: .95; }
+    .kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      border: 1px solid rgba(148,163,184,.6);
+      background: rgba(248,250,252,.7);
+      padding: 2px 6px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 text-slate-900">
+
+  <header class="sticky top-0 z-40 border-b border-slate-200/60 bg-white/70 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-sky-500 shadow-md"></div>
+          <div>
+            <h1 class="text-lg sm:text-xl font-bold tracking-tight">ECスキルマップ × 売上構造ツリー</h1>
+            <p class="text-sm text-slate-600">スキルの強み/弱みと、売上のレバー（集客・転換・客単価…）を“同じ画面”でつなぐ可視化。</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btn-reset" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50">
+            リセット
+          </button>
+          <button id="btn-demo" class="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100">
+            デモ値を入れる
+          </button>
+          <button id="btn-export" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50">
+            JSONエクスポート
+          </button>
+          <label class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50 cursor-pointer">
+            JSONインポート
+            <input id="file-import" type="file" accept="application/json" class="hidden" />
+          </label>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <!-- Left: Skill map -->
+      <section class="lg:col-span-5">
+        <div class="glass rounded-3xl border border-slate-200/70 shadow-sm">
+          <div class="border-b border-slate-200/70 px-5 py-4">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 class="text-base font-bold">スキルマップ（EC担当者）</h2>
+                <p class="text-sm text-slate-600">スキルをクリックすると、関連する売上レバーが右側で強調表示されます。</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="text-xs text-slate-500">操作: <span class="kbd">クリック</span> 選択 / <span class="kbd">Esc</span> 解除</div>
+              </div>
+            </div>
+            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label class="text-xs font-semibold text-slate-600">課題フォーカス（優先レバー）</label>
+                <select id="focus-select" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                  <option value="revenue">売上（全体）</option>
+                  <option value="traffic">集客（流入/セッション）</option>
+                  <option value="cvr">転換（CVR）</option>
+                  <option value="aov">客単価（AOV）</option>
+                  <option value="retention">リピート（LTV/継続）</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs font-semibold text-slate-600">表示</label>
+                <select id="filter-select" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                  <option value="all">すべて</option>
+                  <option value="recommended">優先レバーに効くスキル</option>
+                  <option value="gaps">ギャップ大（低スコア×関連強）</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="skill-list" class="p-4 sm:p-5 space-y-5"></div>
+        </div>
+      </section>
+
+      <!-- Right: Sales tree -->
+      <section class="lg:col-span-7">
+        <div class="glass rounded-3xl border border-slate-200/70 shadow-sm">
+          <div class="border-b border-slate-200/70 px-5 py-4">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 class="text-base font-bold">EC売上構造ツリー（レバー）</h2>
+                <p class="text-sm text-slate-600">KPIツリーのノードをクリックすると、必要スキルが左側で強調表示されます。</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="btn-fit" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50">
+                  全体表示
+                </button>
+                <button id="btn-clear" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50">
+                  選択解除
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 p-4 sm:p-5 lg:grid-cols-12">
+            <div class="lg:col-span-8">
+              <div class="rounded-2xl border border-slate-200/70 bg-white/70 p-2">
+                <svg id="tree-svg" class="h-[520px] w-full"></svg>
+              </div>
+              <p class="mt-2 text-xs text-slate-500">
+                ヒント: ノード選択中は、関連スキル/関連ノードのみ強調します（それ以外は薄く表示）。
+              </p>
+            </div>
+            <aside class="lg:col-span-4">
+              <div class="rounded-2xl border border-slate-200/70 bg-white/70 p-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 class="text-sm font-bold text-slate-800">選択中のノード</h3>
+                    <p id="node-title" class="mt-1 text-base font-bold">未選択</p>
+                  </div>
+                  <span id="node-tag" class="hidden rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700"></span>
+                </div>
+                <div class="mt-3 space-y-3">
+                  <div>
+                    <div class="text-xs font-semibold text-slate-600">定義 / 公式</div>
+                    <div id="node-formula" class="mt-1 text-sm text-slate-800 leading-relaxed">右のツリーからノードを選択してください。</div>
+                  </div>
+                  <div>
+                    <div class="text-xs font-semibold text-slate-600">主な打ち手（例）</div>
+                    <ul id="node-levers" class="mt-1 list-disc pl-5 text-sm text-slate-800 space-y-1">
+                      <li>例: 入口を増やす / 途中離脱を減らす / 購入体験を改善する</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <div class="text-xs font-semibold text-slate-600">関連スキル</div>
+                    <div id="node-skills" class="mt-2 flex flex-wrap gap-2"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4 rounded-2xl border border-slate-200/70 bg-gradient-to-br from-slate-900 to-indigo-900 p-4 text-white shadow-sm">
+                <div class="text-sm font-bold">優先度ヒント（ざっくり）</div>
+                <p class="mt-1 text-xs text-indigo-100">
+                  選んだ「課題フォーカス」に対して、関連が強いのにスコアが低いスキルを上位に出します（簡易モデル）。
+                </p>
+                <ol id="priority-list" class="mt-3 space-y-2 text-sm"></ol>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="mx-auto max-w-7xl px-4 pb-8 sm:px-6">
+    <div class="text-xs text-slate-500">
+      データはブラウザ内（LocalStorage）に保存されます。社内共有したい場合はJSONエクスポート/インポートを使ってください。
+    </div>
+  </footer>
+
+  <script>
+    // -----------------------
+    // Data model
+    // -----------------------
+    const STORAGE_KEY = "ec_skillmap_sales_tree_v1";
+
+    const SALES_TREE = {
+      id: "revenue",
+      label: "売上",
+      tag: "KGI",
+      formula: "売上 = セッション数 × CVR × 客単価（AOV）",
+      levers: [
+        "集客（流入/セッション）を増やす",
+        "転換（CVR）を上げる",
+        "客単価（AOV）を上げる",
+        "継続（LTV）を伸ばす（リピート/解約抑止）"
+      ],
+      children: [
+        {
+          id: "traffic",
+          label: "セッション（流入）",
+          tag: "集客",
+          formula: "セッション = 各チャネル流入の合計",
+          levers: [
+            "SEO：検索での露出・クリック率改善",
+            "広告：配信設計/入札/クリエイティブ改善",
+            "CRM：メール/LINE/アプリで再訪を増やす",
+            "SNS：認知→指名検索/流入の導線設計"
+          ],
+          children: [
+            { id: "seo", label: "SEO（自然検索）", tag: "集客", formula: "検索需要 × 表示回数 × CTR × LP到達", levers: ["情報設計（カテゴリ/商品/記事）", "テクニカルSEO", "コンテンツ品質/EEAT"] },
+            { id: "ads", label: "広告（運用）", tag: "集客", formula: "予算 × 効率（CPC/CPA/ROAS）", levers: ["配信設計（媒体/キャンペーン）", "ターゲティング/入札", "LP×クリエイティブ"] },
+            { id: "sns", label: "SNS/UGC", tag: "集客", formula: "投稿/露出 × 反応 × クリック", levers: ["投稿企画/運用", "UGC設計", "インフルエンサー"] },
+            { id: "crm", label: "CRM（メール/LINE）", tag: "再訪", formula: "リスト × 配信頻度 × CTR × CVR", levers: ["セグメント/シナリオ", "配信設計", "クリエイティブ/コピー"] },
+            { id: "referral", label: "紹介/アフィリエイト", tag: "集客", formula: "提携数 × 送客数 × CVR", levers: ["提携/条件設計", "成果計測", "不正対策"] }
+          ]
+        },
+        {
+          id: "cvr",
+          label: "CVR（転換率）",
+          tag: "転換",
+          formula: "CVR = 購入数 / セッション",
+          levers: [
+            "商品理解：情報が揃い、選べる状態にする",
+            "信頼：レビュー/保証/配送など不安を消す",
+            "UX：導線/速度/検索/フィルタ/決済の摩擦を減らす"
+          ],
+          children: [
+            { id: "pdp", label: "商品ページ（PDP）", tag: "転換", formula: "比較/納得/不安解消 → 購入へ", levers: ["画像/動画/採寸", "価格/訴求/FAQ", "レビュー/保証"] },
+            { id: "ux", label: "UI/UX（回遊〜購入）", tag: "転換", formula: "探しやすさ × 迷いの少なさ × 摩擦の少なさ", levers: ["検索/カテゴリ設計", "速度/モバイル最適化", "カゴ/チェックアウト改善"] },
+            { id: "checkout", label: "決済・配送・返品", tag: "転換", formula: "購入意思 × 手続き完了率", levers: ["決済手段/与信", "送料/納期表示", "返品規定/問い合わせ"] },
+            { id: "trust", label: "信頼（不安解消）", tag: "転換", formula: "不安要素の低下 → 離脱減", levers: ["レビュー/実績", "安全性表示", "カスタマーサポート"] }
+          ]
+        },
+        {
+          id: "aov",
+          label: "AOV（客単価）",
+          tag: "単価",
+          formula: "AOV = 売上 / 注文数",
+          levers: [
+            "商品構成：主力×育成×高単価のバランス",
+            "アップセル/クロスセル：買い合わせ設計",
+            "施策：送料無料閾値・セット・同梱最適化"
+          ],
+          children: [
+            { id: "md", label: "MD/品揃え", tag: "単価", formula: "需要 × 供給 × 競争力（価格/価値）", levers: ["SKU設計/在庫", "価格戦略", "利益設計"] },
+            { id: "promo", label: "販促（クーポン/送料無料）", tag: "単価", formula: "購入動機 × 収益性", levers: ["クーポン設計", "送料無料閾値", "セール設計"] },
+            { id: "bundle", label: "セット/買い合わせ", tag: "単価", formula: "同時購入率 × 追加点数", levers: ["レコメンド", "セット販売", "同梱導線"] }
+          ]
+        },
+        {
+          id: "retention",
+          label: "リピート（LTV/継続）",
+          tag: "継続",
+          formula: "LTV = 購入頻度 × 継続期間 × 粗利",
+          levers: [
+            "初回体験：開封/到着/サポートの満足",
+            "CRM：適切なタイミングの接点",
+            "商品/物流：欠品/遅延/品質問題を潰す"
+          ],
+          children: [
+            { id: "post", label: "購入後体験", tag: "継続", formula: "満足 → 再購買/口コミ", levers: ["同梱物/梱包", "フォロー導線", "問い合わせ対応"] },
+            { id: "ops", label: "運用・在庫・物流", tag: "継続", formula: "欠品/遅延/破損の抑止", levers: ["在庫精度", "出荷SLA", "返品/交換プロセス"] },
+            { id: "loyalty", label: "ロイヤルティ施策", tag: "継続", formula: "会員化率 × 継続率", levers: ["会員特典", "ポイント", "コミュニティ"] }
+          ]
+        }
+      ]
+    };
+
+    // Skill taxonomy: each skill links to tree nodes with weights (0.0-1.0)
+    // "weight" is used for highlighting + prioritization.
+    const SKILL_CATALOG = [
+      {
+        categoryId: "strategy",
+        categoryLabel: "事業・戦略",
+        skills: [
+          { id: "kpi_design", label: "KPI設計/目標分解", description: "売上をレバーに落とし、仮説→施策→検証の回転を作る", links: { revenue: 1.0, traffic: 0.6, cvr: 0.6, aov: 0.6, retention: 0.6 } },
+          { id: "unit_econ", label: "粗利/ユニットエコノミクス", description: "売上だけでなく粗利・CAC・LTVで判断する", links: { revenue: 0.8, ads: 0.7, promo: 0.6, retention: 0.7 } },
+          { id: "roadmap", label: "施策設計/ロードマップ", description: "短期の売上施策と中長期の構造改善の両立", links: { revenue: 0.7, traffic: 0.5, cvr: 0.5, aov: 0.5, retention: 0.5 } }
+        ]
+      },
+      {
+        categoryId: "acquisition",
+        categoryLabel: "集客（流入）",
+        skills: [
+          { id: "seo_skill", label: "SEO（設計/実装/改善）", description: "情報設計・テクニカル・コンテンツの三位一体", links: { traffic: 0.9, seo: 1.0, pdp: 0.4 } },
+          { id: "ads_skill", label: "広告運用（獲得）", description: "媒体横断でCVまで最適化（CPA/ROAS）", links: { traffic: 0.7, ads: 1.0, cvr: 0.3 } },
+          { id: "crm_skill", label: "CRM（メール/LINE）", description: "リスト・セグメント・配信で再訪/再購買を伸ばす", links: { traffic: 0.4, crm: 1.0, retention: 0.8, post: 0.4 } },
+          { id: "sns_skill", label: "SNS/UGC運用", description: "認知→興味→指名→流入の導線を設計する", links: { traffic: 0.6, sns: 1.0, trust: 0.3 } },
+          { id: "affiliate_skill", label: "アフィリエイト/提携", description: "条件設計と成果計測で健全に伸ばす", links: { traffic: 0.5, referral: 1.0 } }
+        ]
+      },
+      {
+        categoryId: "cxo",
+        categoryLabel: "転換（CRO/UX）",
+        skills: [
+          { id: "ux_skill", label: "UI/UX設計", description: "回遊〜購入の摩擦を下げてCVRを上げる", links: { cvr: 1.0, ux: 1.0, checkout: 0.7 } },
+          { id: "pdp_skill", label: "商品ページ改善（PDP）", description: "比較/納得/不安解消の情報を揃える", links: { cvr: 0.9, pdp: 1.0, trust: 0.6 } },
+          { id: "checkout_skill", label: "チェックアウト改善", description: "決済・配送・入力の摩擦を減らす", links: { cvr: 0.8, checkout: 1.0, ux: 0.6 } },
+          { id: "abtest_skill", label: "実験設計（AB/多変量）", description: "仮説の質と検証の回転で継続的に改善する", links: { cvr: 0.7, ux: 0.5, pdp: 0.5, revenue: 0.5 } }
+        ]
+      },
+      {
+        categoryId: "md",
+        categoryLabel: "商品・MD・販促",
+        skills: [
+          { id: "pricing", label: "価格戦略/値付け", description: "価値と競争を踏まえた価格・利益の設計", links: { aov: 0.7, md: 0.9, promo: 0.4 } },
+          { id: "assortment", label: "品揃え/SKU設計", description: "主力/育成/高単価を揃え、欠品を最小化", links: { aov: 0.7, md: 1.0, retention: 0.4, ops: 0.3 } },
+          { id: "upsell", label: "アップセル/クロスセル", description: "買い合わせ導線でAOVを上げる", links: { aov: 0.9, bundle: 1.0, cvr: 0.2 } },
+          { id: "promo_skill", label: "販促設計（セール/クーポン）", description: "売上と粗利のバランスを取る", links: { aov: 0.6, promo: 1.0, revenue: 0.5 } }
+        ]
+      },
+      {
+        categoryId: "data",
+        categoryLabel: "データ・分析",
+        skills: [
+          { id: "ga4", label: "GA4/計測設計", description: "イベント・ファネル・属性で意思決定できる状態に", links: { revenue: 0.7, traffic: 0.5, cvr: 0.6, retention: 0.4 } },
+          { id: "sql", label: "SQL/BI（可視化）", description: "現場で使えるダッシュボードと深掘り", links: { revenue: 0.6, retention: 0.6, ops: 0.4 } },
+          { id: "forecast", label: "需要/売上予測", description: "在庫・販促・広告の整合を取る", links: { revenue: 0.5, md: 0.6, ops: 0.6, ads: 0.3 } }
+        ]
+      },
+      {
+        categoryId: "ops",
+        categoryLabel: "運用・CS",
+        skills: [
+          { id: "ops_skill", label: "受注〜出荷オペ最適化", description: "出荷SLA・誤出荷・返品の改善", links: { retention: 0.7, ops: 1.0, post: 0.6, checkout: 0.3 } },
+          { id: "cs_skill", label: "CS/ボイスオブカスタマー", description: "不安を拾い、改善につなげる", links: { trust: 0.8, retention: 0.7, post: 0.8, cvr: 0.3 } },
+          { id: "qa", label: "品質管理/トラブル対応", description: "不良・遅延・炎上の予防と再発防止", links: { trust: 0.6, retention: 0.6, ops: 0.5 } }
+        ]
+      },
+      {
+        categoryId: "creative",
+        categoryLabel: "クリエイティブ",
+        skills: [
+          { id: "copy", label: "コピー/訴求設計", description: "ベネフィットを言語化し、迷いを減らす", links: { cvr: 0.6, pdp: 0.6, ads: 0.4, trust: 0.3 } },
+          { id: "design", label: "デザイン（画像/動画）", description: "魅力/理解/信頼を視覚で補強する", links: { cvr: 0.5, pdp: 0.7, ads: 0.4, sns: 0.3 } }
+        ]
+      },
+      {
+        categoryId: "mgmt",
+        categoryLabel: "マネジメント",
+        skills: [
+          { id: "stakeholder", label: "関係者調整（社内/外注）", description: "スピードと品質の両立（要件/合意/進行）", links: { revenue: 0.5, traffic: 0.3, cvr: 0.3, aov: 0.3, retention: 0.3 } },
+          { id: "process", label: "改善プロセス運用", description: "定例・チケット・ナレッジで改善を継続する", links: { revenue: 0.5, cvr: 0.4, retention: 0.4 } }
+        ]
+      }
+    ];
+
+    const DEFAULT_STATE = {
+      selectedSkillId: null,
+      selectedNodeId: null,
+      skillLevels: Object.fromEntries(SKILL_CATALOG.flatMap(c => c.skills.map(s => [s.id, 2]))), // 0-4
+      ui: { focus: "revenue", filter: "all" }
+    };
+
+    // -----------------------
+    // Helpers
+    // -----------------------
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+    const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return deepClone(DEFAULT_STATE);
+        const parsed = JSON.parse(raw);
+        const state = deepClone(DEFAULT_STATE);
+        // Merge conservatively
+        if (parsed && typeof parsed === "object") {
+          state.selectedSkillId = parsed.selectedSkillId ?? null;
+          state.selectedNodeId = parsed.selectedNodeId ?? null;
+          state.ui = { ...state.ui, ...(parsed.ui || {}) };
+          if (parsed.skillLevels && typeof parsed.skillLevels === "object") {
+            for (const k of Object.keys(state.skillLevels)) {
+              const v = parsed.skillLevels[k];
+              if (typeof v === "number") state.skillLevels[k] = clamp(Math.round(v), 0, 4);
+            }
+          }
+        }
+        return state;
+      } catch {
+        return deepClone(DEFAULT_STATE);
+      }
+    }
+    function saveState() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); } catch {}
+    }
+
+    function walkTree(root, fn) {
+      fn(root);
+      (root.children || []).forEach(ch => walkTree(ch, fn));
+    }
+
+    function treeNodeById(root, id) {
+      let found = null;
+      walkTree(root, (n) => { if (n.id === id) found = n; });
+      return found;
+    }
+
+    function findPathToNode(root, id) {
+      // Returns an array of nodes from root to target, or null.
+      if (!root) return null;
+      if (root.id === id) return [root];
+      for (const ch of (root.children || [])) {
+        const p = findPathToNode(ch, id);
+        if (p) return [root, ...p];
+      }
+      return null;
+    }
+
+    function relatedNodeSetForSelectedNode(root, selectedId) {
+      // For usability: include the node itself + ancestors + descendants.
+      const set = new Set();
+      const path = findPathToNode(root, selectedId);
+      if (!path) return set;
+      path.forEach(n => set.add(n.id)); // ancestors (incl. itself)
+      const selectedNode = path[path.length - 1];
+      walkTree(selectedNode, (n) => set.add(n.id)); // descendants (incl. itself)
+      return set;
+    }
+
+    function getSkillById(id) {
+      for (const cat of SKILL_CATALOG) {
+        const s = cat.skills.find(x => x.id === id);
+        if (s) return s;
+      }
+      return null;
+    }
+
+    function linkedNodeWeightsForSkill(skillId) {
+      const s = getSkillById(skillId);
+      return s ? (s.links || {}) : {};
+    }
+
+    function linkedSkillsForNode(nodeId) {
+      const out = [];
+      for (const cat of SKILL_CATALOG) {
+        for (const s of cat.skills) {
+          const w = (s.links || {})[nodeId];
+          if (typeof w === "number" && w > 0) out.push({ ...s, weight: w, categoryLabel: cat.categoryLabel });
+        }
+      }
+      return out.sort((a,b) => b.weight - a.weight);
+    }
+
+    function focusToNodeIds(focus) {
+      if (focus === "revenue") return ["revenue"];
+      if (focus === "traffic") return ["traffic", "seo", "ads", "sns", "crm", "referral"];
+      if (focus === "cvr") return ["cvr", "pdp", "ux", "checkout", "trust"];
+      if (focus === "aov") return ["aov", "md", "promo", "bundle"];
+      if (focus === "retention") return ["retention", "post", "ops", "loyalty"];
+      return ["revenue"];
+    }
+
+    function scorePriority(skillId) {
+      // Simple scoring: (1 - normalizedLevel) * sum(weights on focus nodes)
+      const level = appState.skillLevels[skillId] ?? 0;
+      const levelNorm = level / 4;
+      const focusNodes = focusToNodeIds(appState.ui.focus);
+      const skill = getSkillById(skillId);
+      if (!skill) return 0;
+      let impact = 0;
+      for (const nid of focusNodes) impact += (skill.links?.[nid] || 0);
+      return (1 - levelNorm) * impact;
+    }
+
+    function downloadJson(filename, obj) {
+      const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    // -----------------------
+    // Rendering: Skill list
+    // -----------------------
+    function renderSkillList() {
+      const container = document.getElementById("skill-list");
+      container.innerHTML = "";
+
+      const focusNodes = new Set(focusToNodeIds(appState.ui.focus));
+      const selectedNodeSet = appState.selectedNodeId
+        ? relatedNodeSetForSelectedNode(SALES_TREE, appState.selectedNodeId)
+        : null;
+
+      function shouldShowSkill(skill) {
+        const filter = appState.ui.filter;
+        if (filter === "all") return true;
+        if (filter === "recommended") {
+          return Object.keys(skill.links || {}).some(nid => focusNodes.has(nid) && (skill.links[nid] || 0) >= 0.5);
+        }
+        if (filter === "gaps") {
+          return scorePriority(skill.id) >= 0.55; // tuned for demo
+        }
+        return true;
+      }
+
+      for (const cat of SKILL_CATALOG) {
+        const visibleSkills = cat.skills.filter(shouldShowSkill);
+        if (visibleSkills.length === 0) continue;
+
+        const section = document.createElement("section");
+        section.className = "rounded-2xl border border-slate-200/70 bg-white/60 p-4";
+        section.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="text-sm font-bold text-slate-800">${cat.categoryLabel}</h3>
+            <div class="text-xs text-slate-500">0=未経験 / 4=得意</div>
+          </div>
+          <div class="mt-3 space-y-3"></div>
+        `;
+
+        const list = section.querySelector("div.mt-3");
+        for (const s of visibleSkills) {
+          const isSelected = appState.selectedSkillId === s.id;
+          const level = appState.skillLevels[s.id] ?? 0;
+          const pri = scorePriority(s.id);
+          const relatedWeight = selectedNodeSet
+            ? Math.max(0, ...Array.from(selectedNodeSet).map(nid => (s.links?.[nid] || 0)))
+            : 0;
+          const shouldDim = !!selectedNodeSet && relatedWeight <= 0;
+
+          const row = document.createElement("div");
+          row.className = [
+            "rounded-xl border p-3 transition",
+            shouldDim ? "opacity-35" : "opacity-100",
+            (relatedWeight >= 0.6) ? "border-indigo-200 bg-indigo-50/60" : "border-slate-200/70 bg-white/70",
+            "hover:bg-white"
+          ].join(" ");
+          row.innerHTML = `
+            <button class="w-full text-left">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold text-slate-900 truncate">${s.label}</span>
+                    ${pri >= 0.55 ? `<span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">優先</span>` : ""}
+                    ${selectedNodeSet && relatedWeight > 0 ? `<span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700">関連 ${relatedWeight.toFixed(1)}</span>` : ""}
+                  </div>
+                  <div class="mt-1 text-xs text-slate-600 leading-relaxed">${s.description}</div>
+                </div>
+                <span class="shrink-0 rounded-xl ${isSelected ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-700"} px-2 py-1 text-xs font-bold">
+                  Lv.${level}
+                </span>
+              </div>
+            </button>
+            <div class="mt-3 flex items-center gap-3">
+              <input type="range" min="0" max="4" step="1" value="${level}" class="w-full accent-indigo-600" aria-label="${s.label} レベル" />
+              <button class="btn-show-links rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-semibold hover:bg-slate-50">関連</button>
+            </div>
+          `;
+
+          const btn = row.querySelector("button");
+          btn.addEventListener("click", () => {
+            appState.selectedNodeId = null;
+            appState.selectedSkillId = (appState.selectedSkillId === s.id) ? null : s.id;
+            saveState();
+            syncUIFromState();
+          });
+
+          const slider = row.querySelector("input[type=range]");
+          slider.addEventListener("input", (e) => {
+            const v = clamp(parseInt(e.target.value, 10), 0, 4);
+            appState.skillLevels[s.id] = v;
+            saveState();
+            // lightweight rerender of lists + priority; tree highlighting based on selection should stay.
+            renderSkillList();
+            renderPriority();
+          });
+
+          row.querySelector(".btn-show-links").addEventListener("click", (e) => {
+            e.stopPropagation();
+            appState.selectedNodeId = null;
+            appState.selectedSkillId = s.id;
+            saveState();
+            syncUIFromState();
+          });
+
+          list.appendChild(row);
+        }
+
+        container.appendChild(section);
+      }
+    }
+
+    // -----------------------
+    // Rendering: Priority list
+    // -----------------------
+    function renderPriority() {
+      const ol = document.getElementById("priority-list");
+      ol.innerHTML = "";
+
+      const scored = SKILL_CATALOG.flatMap(cat => cat.skills.map(s => ({
+        id: s.id,
+        label: s.label,
+        category: cat.categoryLabel,
+        level: appState.skillLevels[s.id] ?? 0,
+        score: scorePriority(s.id)
+      }))).sort((a,b) => b.score - a.score);
+
+      const top = scored.filter(x => x.score > 0).slice(0, 6);
+      if (top.length === 0) {
+        ol.innerHTML = `<li class="text-indigo-100/90 text-xs">このフォーカスでは、目立ったギャップは見つかりませんでした。</li>`;
+        return;
+      }
+
+      for (const item of top) {
+        const li = document.createElement("li");
+        li.className = "rounded-xl bg-white/10 px-3 py-2 hover:bg-white/15 transition cursor-pointer";
+        li.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-xs text-indigo-100/90 truncate">${item.category}</div>
+              <div class="font-bold truncate">${item.label}</div>
+            </div>
+            <div class="shrink-0 text-right">
+              <div class="text-xs text-indigo-100/90">Lv.${item.level}</div>
+              <div class="text-xs text-indigo-100/90">gap ${item.score.toFixed(2)}</div>
+            </div>
+          </div>
+        `;
+        li.addEventListener("click", () => {
+          appState.selectedNodeId = null;
+          appState.selectedSkillId = item.id;
+          saveState();
+          syncUIFromState();
+        });
+        ol.appendChild(li);
+      }
+    }
+
+    // -----------------------
+    // Rendering: D3 tree
+    // -----------------------
+    let treeApi = null;
+
+    function renderTree() {
+      const svg = d3.select("#tree-svg");
+      svg.selectAll("*").remove();
+
+      const width = svg.node().clientWidth || 800;
+      const height = svg.node().clientHeight || 520;
+
+      const margin = { top: 24, right: 36, bottom: 24, left: 36 };
+      const innerW = width - margin.left - margin.right;
+      const innerH = height - margin.top - margin.bottom;
+
+      const root = d3.hierarchy(SALES_TREE);
+      const layout = d3.tree().size([innerH, innerW]);
+      layout(root);
+
+      const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+      // Links
+      const link = g.append("g")
+        .selectAll("path")
+        .data(root.links())
+        .join("path")
+        .attr("class", "link-line")
+        .attr("fill", "none")
+        .attr("stroke-width", 2)
+        .attr("d", d3.linkHorizontal()
+          .x(d => d.y)
+          .y(d => d.x)
+        );
+
+      // Nodes
+      const nodeG = g.append("g")
+        .selectAll("g")
+        .data(root.descendants())
+        .join("g")
+        .attr("transform", d => `translate(${d.y},${d.x})`)
+        .style("cursor", "pointer");
+
+      // Node pill background
+      nodeG.append("rect")
+        .attr("class", "node-pill")
+        .attr("x", -6)
+        .attr("y", -18)
+        .attr("rx", 12)
+        .attr("ry", 12)
+        .attr("height", 36)
+        .attr("width", d => {
+          const base = 110;
+          const extra = Math.max(0, (d.data.label?.length || 0) - 6) * 8;
+          return base + extra;
+        })
+        .attr("fill", d => {
+          const tag = d.data.tag || "";
+          if (tag === "KGI") return "rgba(30, 41, 59, .92)";
+          if (tag === "集客") return "rgba(2, 132, 199, .88)";
+          if (tag === "転換") return "rgba(79, 70, 229, .88)";
+          if (tag === "単価") return "rgba(217, 119, 6, .88)";
+          if (tag === "継続") return "rgba(5, 150, 105, .88)";
+          if (tag === "再訪") return "rgba(5, 150, 105, .78)";
+          return "rgba(51, 65, 85, .80)";
+        });
+
+      nodeG.append("text")
+        .attr("x", 10)
+        .attr("y", 5)
+        .attr("fill", "white")
+        .attr("font-size", 12)
+        .attr("font-weight", 700)
+        .text(d => d.data.label);
+
+      nodeG.append("text")
+        .attr("x", 10)
+        .attr("y", -24)
+        .attr("fill", "rgba(15,23,42,.65)")
+        .attr("font-size", 10)
+        .attr("font-weight", 700)
+        .text(d => d.data.tag ? d.data.tag : "");
+
+      function applyHighlighting() {
+        const selectedNodeId = appState.selectedNodeId;
+        const selectedSkillId = appState.selectedSkillId;
+
+        const focus = new Set();
+        if (selectedNodeId) {
+          focus.add(selectedNodeId);
+          // include ancestors/descendants for context
+          const selected = root.descendants().find(d => d.data.id === selectedNodeId);
+          if (selected) {
+            selected.ancestors().forEach(a => focus.add(a.data.id));
+            selected.descendants().forEach(a => focus.add(a.data.id));
+          }
+        } else if (selectedSkillId) {
+          const weights = linkedNodeWeightsForSkill(selectedSkillId);
+          for (const nid of Object.keys(weights)) if ((weights[nid] || 0) > 0) focus.add(nid);
+        }
+
+        // Nodes
+        nodeG.selectAll("rect.node-pill")
+          .classed("is-dim", d => focus.size > 0 && !focus.has(d.data.id))
+          .classed("is-highlight", d => {
+            if (selectedNodeId) return d.data.id === selectedNodeId;
+            if (selectedSkillId) {
+              const w = linkedNodeWeightsForSkill(selectedSkillId)[d.data.id] || 0;
+              return w >= 0.6;
+            }
+            return false;
+          });
+
+        // Links: dim if both ends not in focus; highlight if path touches selected node/strong link
+        link.classed("is-dim", l => focus.size > 0 && !(focus.has(l.source.data.id) && focus.has(l.target.data.id)))
+          .classed("is-highlight", l => {
+            if (selectedNodeId) return (l.source.data.id === selectedNodeId || l.target.data.id === selectedNodeId);
+            if (selectedSkillId) {
+              const weights = linkedNodeWeightsForSkill(selectedSkillId);
+              return (weights[l.target.data.id] || 0) >= 0.6;
+            }
+            return false;
+          });
+      }
+
+      nodeG.on("click", (event, d) => {
+        appState.selectedSkillId = null;
+        appState.selectedNodeId = (appState.selectedNodeId === d.data.id) ? null : d.data.id;
+        saveState();
+        syncUIFromState();
+      });
+
+      treeApi = {
+        applyHighlighting,
+        fit: () => {
+          // For this static tree, "fit" resets selection highlight; actual zoom/pan omitted intentionally.
+          appState.selectedNodeId = null;
+          appState.selectedSkillId = null;
+          saveState();
+          syncUIFromState();
+        }
+      };
+
+      applyHighlighting();
+    }
+
+    // -----------------------
+    // Rendering: Node detail panel
+    // -----------------------
+    function renderNodePanel() {
+      const title = document.getElementById("node-title");
+      const tagEl = document.getElementById("node-tag");
+      const formula = document.getElementById("node-formula");
+      const levers = document.getElementById("node-levers");
+      const skillsWrap = document.getElementById("node-skills");
+
+      const nodeId = appState.selectedNodeId;
+      const skillId = appState.selectedSkillId;
+
+      if (!nodeId && !skillId) {
+        title.textContent = "未選択";
+        tagEl.classList.add("hidden");
+        formula.textContent = "右のツリー、または左のスキルを選択してください。";
+        levers.innerHTML = `<li>例: 集客（流入）/ 転換（CVR）/ 単価（AOV）/ 継続（LTV）</li>`;
+        skillsWrap.innerHTML = "";
+        return;
+      }
+
+      if (nodeId) {
+        const n = treeNodeById(SALES_TREE, nodeId);
+        title.textContent = n?.label || "（不明）";
+        if (n?.tag) {
+          tagEl.textContent = n.tag;
+          tagEl.classList.remove("hidden");
+        } else {
+          tagEl.classList.add("hidden");
+        }
+        formula.textContent = n?.formula || "—";
+        levers.innerHTML = "";
+        for (const item of (n?.levers || [])) {
+          const li = document.createElement("li");
+          li.textContent = item;
+          levers.appendChild(li);
+        }
+        const related = linkedSkillsForNode(nodeId).slice(0, 10);
+        skillsWrap.innerHTML = "";
+        for (const s of related) {
+          const chip = document.createElement("button");
+          chip.className = "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-50";
+          chip.title = `${s.categoryLabel} / 関連度 ${s.weight.toFixed(1)}`;
+          chip.textContent = s.label;
+          chip.addEventListener("click", () => {
+            appState.selectedNodeId = null;
+            appState.selectedSkillId = s.id;
+            saveState();
+            syncUIFromState();
+          });
+          skillsWrap.appendChild(chip);
+        }
+        return;
+      }
+
+      if (skillId) {
+        const s = getSkillById(skillId);
+        title.textContent = s?.label || "（不明）";
+        tagEl.textContent = "スキル";
+        tagEl.classList.remove("hidden");
+        formula.textContent = s?.description || "—";
+        levers.innerHTML = "";
+        levers.innerHTML = `<li>右のツリーで、関連ノードが強調表示されています。</li>`;
+        skillsWrap.innerHTML = "";
+        for (const [nid, w] of Object.entries(s?.links || {}).sort((a,b) => (b[1]||0)-(a[1]||0)).slice(0, 10)) {
+          const n = treeNodeById(SALES_TREE, nid);
+          const chip = document.createElement("button");
+          chip.className = "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-50";
+          chip.title = `関連度 ${w.toFixed(1)}`;
+          chip.textContent = `${n?.label || nid}（${w.toFixed(1)}）`;
+          chip.addEventListener("click", () => {
+            appState.selectedSkillId = null;
+            appState.selectedNodeId = nid;
+            saveState();
+            syncUIFromState();
+          });
+          skillsWrap.appendChild(chip);
+        }
+      }
+    }
+
+    // -----------------------
+    // Wiring / state sync
+    // -----------------------
+    let appState = loadState();
+
+    function syncUIFromState() {
+      // selects
+      document.getElementById("focus-select").value = appState.ui.focus;
+      document.getElementById("filter-select").value = appState.ui.filter;
+
+      renderSkillList();
+      renderPriority();
+      renderNodePanel();
+      if (!treeApi) renderTree();
+      treeApi?.applyHighlighting?.();
+    }
+
+    // Controls
+    document.getElementById("focus-select").addEventListener("change", (e) => {
+      appState.ui.focus = e.target.value;
+      saveState();
+      renderSkillList();
+      renderPriority();
+    });
+
+    document.getElementById("filter-select").addEventListener("change", (e) => {
+      appState.ui.filter = e.target.value;
+      saveState();
+      renderSkillList();
+    });
+
+    document.getElementById("btn-clear").addEventListener("click", () => {
+      appState.selectedNodeId = null;
+      appState.selectedSkillId = null;
+      saveState();
+      syncUIFromState();
+    });
+
+    document.getElementById("btn-fit").addEventListener("click", () => {
+      treeApi?.fit?.();
+    });
+
+    document.getElementById("btn-reset").addEventListener("click", () => {
+      appState = deepClone(DEFAULT_STATE);
+      saveState();
+      syncUIFromState();
+    });
+
+    document.getElementById("btn-demo").addEventListener("click", () => {
+      // A plausible demo profile: strong in CRO/UX, weaker in ops/data
+      const demo = deepClone(DEFAULT_STATE);
+      demo.skillLevels = { ...demo.skillLevels,
+        kpi_design: 3, unit_econ: 2, roadmap: 3,
+        seo_skill: 2, ads_skill: 3, crm_skill: 2, sns_skill: 2, affiliate_skill: 1,
+        ux_skill: 4, pdp_skill: 3, checkout_skill: 3, abtest_skill: 3,
+        pricing: 2, assortment: 2, upsell: 3, promo_skill: 2,
+        ga4: 1, sql: 1, forecast: 2,
+        ops_skill: 1, cs_skill: 2, qa: 1,
+        copy: 3, design: 2,
+        stakeholder: 3, process: 2
+      };
+      appState = demo;
+      saveState();
+      syncUIFromState();
+    });
+
+    document.getElementById("btn-export").addEventListener("click", () => {
+      downloadJson("ec-skillmap-sales-tree.json", {
+        exportedAt: new Date().toISOString(),
+        state: appState,
+        note: "stateのみを使えばOK（catalog/treeはHTML内に固定）"
+      });
+    });
+
+    document.getElementById("file-import").addEventListener("change", async (e) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        const imported = parsed?.state || parsed;
+        // Merge into default shape
+        const merged = deepClone(DEFAULT_STATE);
+        merged.ui = { ...merged.ui, ...(imported.ui || {}) };
+        merged.selectedSkillId = imported.selectedSkillId ?? null;
+        merged.selectedNodeId = imported.selectedNodeId ?? null;
+        if (imported.skillLevels && typeof imported.skillLevels === "object") {
+          for (const k of Object.keys(merged.skillLevels)) {
+            const v = imported.skillLevels[k];
+            if (typeof v === "number") merged.skillLevels[k] = clamp(Math.round(v), 0, 4);
+          }
+        }
+        appState = merged;
+        saveState();
+        syncUIFromState();
+      } catch {
+        alert("JSONの読み込みに失敗しました（形式を確認してください）。");
+      }
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        appState.selectedSkillId = null;
+        appState.selectedNodeId = null;
+        saveState();
+        syncUIFromState();
+      }
+    });
+
+    // Resize handling for SVG
+    let resizeTimer = null;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        renderTree();
+        treeApi?.applyHighlighting?.();
+      }, 120);
+    });
+
+    // Boot
+    syncUIFromState();
+  </script>
+</body>
+</html>
+
