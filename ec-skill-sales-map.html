@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EC担当者スキルマップ × 売上構造ビジュアライザー</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .tree-node {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .tree-node:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .tree-node.highlighted {
+            ring: 4px;
+            ring-color: #f59e0b;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
+        }
+        
+        .skill-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .skill-card:hover {
+            transform: scale(1.02);
+        }
+        
+        .skill-card.highlighted {
+            box-shadow: 0 0 25px rgba(245, 158, 11, 0.6);
+            border-color: #f59e0b !important;
+        }
+        
+        .connection-line {
+            stroke-dasharray: 5, 5;
+            animation: dash 1s linear infinite;
+        }
+        
+        @keyframes dash {
+            to { stroke-dashoffset: -10; }
+        }
+        
+        .skill-bar {
+            transition: width 0.5s ease;
+        }
+        
+        .level-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .level-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .level-btn.active {
+            transform: scale(1.15);
+            box-shadow: 0 0 10px currentColor;
+        }
+        
+        .tree-branch {
+            position: relative;
+        }
+        
+        .tree-branch::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: -20px;
+            width: 2px;
+            height: 20px;
+            background: #cbd5e1;
+        }
+        
+        .tree-connector {
+            position: relative;
+        }
+        
+        .tree-connector::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 100%;
+            width: 30px;
+            height: 2px;
+            background: #cbd5e1;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
+                🛒 EC担当者スキルマップ × 売上構造
+            </h1>
+            <p class="text-white/80 text-sm md:text-base">スキルと売上貢献の関係を可視化し、成長戦略を立てましょう</p>
+        </header>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Left Panel: Sales Tree Structure -->
+            <div class="glass-card rounded-2xl p-6 shadow-xl">
+                <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <span class="text-2xl">📊</span> EC売上構造ツリー
+                </h2>
+                <p class="text-sm text-slate-500 mb-6">各要素をクリックすると、関連するスキルがハイライトされます</p>
+                
+                <!-- Sales Formula -->
+                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-4 mb-6 text-white text-center">
+                    <div class="text-sm opacity-80 mb-1">売上の方程式</div>
+                    <div class="text-lg md:text-xl font-bold">
+                        売上 = <span class="bg-white/20 px-2 py-1 rounded">訪問者数</span> × 
+                        <span class="bg-white/20 px-2 py-1 rounded">転換率</span> × 
+                        <span class="bg-white/20 px-2 py-1 rounded">客単価</span>
+                    </div>
+                </div>
+
+                <!-- Tree Structure -->
+                <div class="space-y-6" id="sales-tree">
+                    <!-- 訪問者数 (Traffic) -->
+                    <div class="tree-section">
+                        <div class="tree-node bg-blue-50 border-2 border-blue-400 rounded-xl p-4" data-category="traffic">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-3xl">👥</span>
+                                    <div>
+                                        <h3 class="font-bold text-blue-800">訪問者数（集客）</h3>
+                                        <p class="text-xs text-blue-600">サイトへの流入を増やす</p>
+                                    </div>
+                                </div>
+                                <span class="text-blue-400 text-2xl">▼</span>
+                            </div>
+                        </div>
+                        <div class="ml-8 mt-3 space-y-2">
+                            <div class="tree-node bg-blue-50/50 border border-blue-200 rounded-lg p-3 flex items-center gap-2" data-element="seo">
+                                <span>🔍</span> <span class="text-sm font-medium text-blue-700">SEO/自然検索</span>
+                            </div>
+                            <div class="tree-node bg-blue-50/50 border border-blue-200 rounded-lg p-3 flex items-center gap-2" data-element="ads">
+                                <span>📢</span> <span class="text-sm font-medium text-blue-700">広告運用（リスティング/ディスプレイ/SNS）</span>
+                            </div>
+                            <div class="tree-node bg-blue-50/50 border border-blue-200 rounded-lg p-3 flex items-center gap-2" data-element="sns">
+                                <span>📱</span> <span class="text-sm font-medium text-blue-700">SNSマーケティング</span>
+                            </div>
+                            <div class="tree-node bg-blue-50/50 border border-blue-200 rounded-lg p-3 flex items-center gap-2" data-element="email">
+                                <span>📧</span> <span class="text-sm font-medium text-blue-700">メール/CRM施策</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 転換率 (CVR) -->
+                    <div class="tree-section">
+                        <div class="tree-node bg-green-50 border-2 border-green-400 rounded-xl p-4" data-category="cvr">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-3xl">🎯</span>
+                                    <div>
+                                        <h3 class="font-bold text-green-800">転換率（CVR）</h3>
+                                        <p class="text-xs text-green-600">訪問者を購入者に変える</p>
+                                    </div>
+                                </div>
+                                <span class="text-green-400 text-2xl">▼</span>
+                            </div>
+                        </div>
+                        <div class="ml-8 mt-3 space-y-2">
+                            <div class="tree-node bg-green-50/50 border border-green-200 rounded-lg p-3 flex items-center gap-2" data-element="uiux">
+                                <span>🎨</span> <span class="text-sm font-medium text-green-700">サイトUI/UX改善</span>
+                            </div>
+                            <div class="tree-node bg-green-50/50 border border-green-200 rounded-lg p-3 flex items-center gap-2" data-element="product-page">
+                                <span>📄</span> <span class="text-sm font-medium text-green-700">商品ページ最適化</span>
+                            </div>
+                            <div class="tree-node bg-green-50/50 border border-green-200 rounded-lg p-3 flex items-center gap-2" data-element="cart">
+                                <span>🛒</span> <span class="text-sm font-medium text-green-700">カート離脱対策</span>
+                            </div>
+                            <div class="tree-node bg-green-50/50 border border-green-200 rounded-lg p-3 flex items-center gap-2" data-element="payment">
+                                <span>💳</span> <span class="text-sm font-medium text-green-700">決済フロー最適化</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 客単価 (AOV) -->
+                    <div class="tree-section">
+                        <div class="tree-node bg-amber-50 border-2 border-amber-400 rounded-xl p-4" data-category="aov">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-3xl">💰</span>
+                                    <div>
+                                        <h3 class="font-bold text-amber-800">客単価（AOV）</h3>
+                                        <p class="text-xs text-amber-600">1回の購入金額を上げる</p>
+                                    </div>
+                                </div>
+                                <span class="text-amber-400 text-2xl">▼</span>
+                            </div>
+                        </div>
+                        <div class="ml-8 mt-3 space-y-2">
+                            <div class="tree-node bg-amber-50/50 border border-amber-200 rounded-lg p-3 flex items-center gap-2" data-element="cross-sell">
+                                <span>🔗</span> <span class="text-sm font-medium text-amber-700">クロスセル</span>
+                            </div>
+                            <div class="tree-node bg-amber-50/50 border border-amber-200 rounded-lg p-3 flex items-center gap-2" data-element="up-sell">
+                                <span>⬆️</span> <span class="text-sm font-medium text-amber-700">アップセル</span>
+                            </div>
+                            <div class="tree-node bg-amber-50/50 border border-amber-200 rounded-lg p-3 flex items-center gap-2" data-element="bundle">
+                                <span>📦</span> <span class="text-sm font-medium text-amber-700">セット販売</span>
+                            </div>
+                            <div class="tree-node bg-amber-50/50 border border-amber-200 rounded-lg p-3 flex items-center gap-2" data-element="pricing">
+                                <span>🏷️</span> <span class="text-sm font-medium text-amber-700">価格戦略</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LTV (Repeat) -->
+                    <div class="tree-section">
+                        <div class="tree-node bg-purple-50 border-2 border-purple-400 rounded-xl p-4" data-category="ltv">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-3xl">🔄</span>
+                                    <div>
+                                        <h3 class="font-bold text-purple-800">リピート/LTV</h3>
+                                        <p class="text-xs text-purple-600">顧客生涯価値を高める</p>
+                                    </div>
+                                </div>
+                                <span class="text-purple-400 text-2xl">▼</span>
+                            </div>
+                        </div>
+                        <div class="ml-8 mt-3 space-y-2">
+                            <div class="tree-node bg-purple-50/50 border border-purple-200 rounded-lg p-3 flex items-center gap-2" data-element="loyalty">
+                                <span>⭐</span> <span class="text-sm font-medium text-purple-700">ロイヤルティプログラム</span>
+                            </div>
+                            <div class="tree-node bg-purple-50/50 border border-purple-200 rounded-lg p-3 flex items-center gap-2" data-element="cs">
+                                <span>🤝</span> <span class="text-sm font-medium text-purple-700">顧客サポート</span>
+                            </div>
+                            <div class="tree-node bg-purple-50/50 border border-purple-200 rounded-lg p-3 flex items-center gap-2" data-element="review">
+                                <span>💬</span> <span class="text-sm font-medium text-purple-700">レビュー管理</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Skill Map -->
+            <div class="space-y-6">
+                <!-- Skill Radar Chart -->
+                <div class="glass-card rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <span class="text-2xl">🎯</span> スキルレーダーチャート
+                    </h2>
+                    <div class="h-72">
+                        <canvas id="skill-radar"></canvas>
+                    </div>
+                </div>
+
+                <!-- Skill Cards -->
+                <div class="glass-card rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
+                        <span class="text-2xl">📚</span> スキル詳細評価
+                    </h2>
+                    <p class="text-sm text-slate-500 mb-4">各スキルをクリックすると、関連する売上要素がハイライトされます</p>
+                    
+                    <div class="space-y-4" id="skill-cards">
+                        <!-- Marketing Skills -->
+                        <div class="skill-card border-2 border-indigo-200 rounded-xl p-4" data-skill="marketing">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-2xl">📣</span>
+                                    <h3 class="font-bold text-indigo-800">マーケティング</h3>
+                                </div>
+                                <span class="text-sm text-indigo-600 font-medium" id="marketing-level">Lv.0</span>
+                            </div>
+                            <div class="grid grid-cols-5 gap-2 mb-2">
+                                <button class="level-btn h-8 rounded bg-indigo-100 hover:bg-indigo-300 text-indigo-700 text-xs font-bold" data-skill="marketing" data-level="1">1</button>
+                                <button class="level-btn h-8 rounded bg-indigo-100 hover:bg-indigo-300 text-indigo-700 text-xs font-bold" data-skill="marketing" data-level="2">2</button>
+                                <button class="level-btn h-8 rounded bg-indigo-100 hover:bg-indigo-300 text-indigo-700 text-xs font-bold" data-skill="marketing" data-level="3">3</button>
+                                <button class="level-btn h-8 rounded bg-indigo-100 hover:bg-indigo-300 text-indigo-700 text-xs font-bold" data-skill="marketing" data-level="4">4</button>
+                                <button class="level-btn h-8 rounded bg-indigo-100 hover:bg-indigo-300 text-indigo-700 text-xs font-bold" data-skill="marketing" data-level="5">5</button>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="skill-bar bg-indigo-500 h-2 rounded-full" id="marketing-bar" style="width: 0%"></div>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2">SEO、広告運用、SNS、メールマーケティング</p>
+                        </div>
+
+                        <!-- Data Analysis Skills -->
+                        <div class="skill-card border-2 border-cyan-200 rounded-xl p-4" data-skill="analytics">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-2xl">📈</span>
+                                    <h3 class="font-bold text-cyan-800">データ分析</h3>
+                                </div>
+                                <span class="text-sm text-cyan-600 font-medium" id="analytics-level">Lv.0</span>
+                            </div>
+                            <div class="grid grid-cols-5 gap-2 mb-2">
+                                <button class="level-btn h-8 rounded bg-cyan-100 hover:bg-cyan-300 text-cyan-700 text-xs font-bold" data-skill="analytics" data-level="1">1</button>
+                                <button class="level-btn h-8 rounded bg-cyan-100 hover:bg-cyan-300 text-cyan-700 text-xs font-bold" data-skill="analytics" data-level="2">2</button>
+                                <button class="level-btn h-8 rounded bg-cyan-100 hover:bg-cyan-300 text-cyan-700 text-xs font-bold" data-skill="analytics" data-level="3">3</button>
+                                <button class="level-btn h-8 rounded bg-cyan-100 hover:bg-cyan-300 text-cyan-700 text-xs font-bold" data-skill="analytics" data-level="4">4</button>
+                                <button class="level-btn h-8 rounded bg-cyan-100 hover:bg-cyan-300 text-cyan-700 text-xs font-bold" data-skill="analytics" data-level="5">5</button>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="skill-bar bg-cyan-500 h-2 rounded-full" id="analytics-bar" style="width: 0%"></div>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2">GA4、レポーティング、A/Bテスト、KPI分析</p>
+                        </div>
+
+                        <!-- Site Operations Skills -->
+                        <div class="skill-card border-2 border-emerald-200 rounded-xl p-4" data-skill="operations">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-2xl">⚙️</span>
+                                    <h3 class="font-bold text-emerald-800">サイト運用</h3>
+                                </div>
+                                <span class="text-sm text-emerald-600 font-medium" id="operations-level">Lv.0</span>
+                            </div>
+                            <div class="grid grid-cols-5 gap-2 mb-2">
+                                <button class="level-btn h-8 rounded bg-emerald-100 hover:bg-emerald-300 text-emerald-700 text-xs font-bold" data-skill="operations" data-level="1">1</button>
+                                <button class="level-btn h-8 rounded bg-emerald-100 hover:bg-emerald-300 text-emerald-700 text-xs font-bold" data-skill="operations" data-level="2">2</button>
+                                <button class="level-btn h-8 rounded bg-emerald-100 hover:bg-emerald-300 text-emerald-700 text-xs font-bold" data-skill="operations" data-level="3">3</button>
+                                <button class="level-btn h-8 rounded bg-emerald-100 hover:bg-emerald-300 text-emerald-700 text-xs font-bold" data-skill="operations" data-level="4">4</button>
+                                <button class="level-btn h-8 rounded bg-emerald-100 hover:bg-emerald-300 text-emerald-700 text-xs font-bold" data-skill="operations" data-level="5">5</button>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="skill-bar bg-emerald-500 h-2 rounded-full" id="operations-bar" style="width: 0%"></div>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2">CMS操作、商品登録、在庫管理、受注処理</p>
+                        </div>
+
+                        <!-- Creative Skills -->
+                        <div class="skill-card border-2 border-pink-200 rounded-xl p-4" data-skill="creative">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-2xl">🎨</span>
+                                    <h3 class="font-bold text-pink-800">クリエイティブ</h3>
+                                </div>
+                                <span class="text-sm text-pink-600 font-medium" id="creative-level">Lv.0</span>
+                            </div>
+                            <div class="grid grid-cols-5 gap-2 mb-2">
+                                <button class="level-btn h-8 rounded bg-pink-100 hover:bg-pink-300 text-pink-700 text-xs font-bold" data-skill="creative" data-level="1">1</button>
+                                <button class="level-btn h-8 rounded bg-pink-100 hover:bg-pink-300 text-pink-700 text-xs font-bold" data-skill="creative" data-level="2">2</button>
+                                <button class="level-btn h-8 rounded bg-pink-100 hover:bg-pink-300 text-pink-700 text-xs font-bold" data-skill="creative" data-level="3">3</button>
+                                <button class="level-btn h-8 rounded bg-pink-100 hover:bg-pink-300 text-pink-700 text-xs font-bold" data-skill="creative" data-level="4">4</button>
+                                <button class="level-btn h-8 rounded bg-pink-100 hover:bg-pink-300 text-pink-700 text-xs font-bold" data-skill="creative" data-level="5">5</button>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="skill-bar bg-pink-500 h-2 rounded-full" id="creative-bar" style="width: 0%"></div>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2">バナー制作、写真撮影、コピーライティング</p>
+                        </div>
+
+                        <!-- Customer Service Skills -->
+                        <div class="skill-card border-2 border-orange-200 rounded-xl p-4" data-skill="customer">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-2xl">🤝</span>
+                                    <h3 class="font-bold text-orange-800">顧客対応</h3>
+                                </div>
+                                <span class="text-sm text-orange-600 font-medium" id="customer-level">Lv.0</span>
+                            </div>
+                            <div class="grid grid-cols-5 gap-2 mb-2">
+                                <button class="level-btn h-8 rounded bg-orange-100 hover:bg-orange-300 text-orange-700 text-xs font-bold" data-skill="customer" data-level="1">1</button>
+                                <button class="level-btn h-8 rounded bg-orange-100 hover:bg-orange-300 text-orange-700 text-xs font-bold" data-skill="customer" data-level="2">2</button>
+                                <button class="level-btn h-8 rounded bg-orange-100 hover:bg-orange-300 text-orange-700 text-xs font-bold" data-skill="customer" data-level="3">3</button>
+                                <button class="level-btn h-8 rounded bg-orange-100 hover:bg-orange-300 text-orange-700 text-xs font-bold" data-skill="customer" data-level="4">4</button>
+                                <button class="level-btn h-8 rounded bg-orange-100 hover:bg-orange-300 text-orange-700 text-xs font-bold" data-skill="customer" data-level="5">5</button>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="skill-bar bg-orange-500 h-2 rounded-full" id="customer-bar" style="width: 0%"></div>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2">CS対応、レビュー管理、CRM運用</p>
+                        </div>
+
+                        <!-- Strategy Skills -->
+                        <div class="skill-card border-2 border-violet-200 rounded-xl p-4" data-skill="strategy">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-2xl">🧠</span>
+                                    <h3 class="font-bold text-violet-800">戦略立案</h3>
+                                </div>
+                                <span class="text-sm text-violet-600 font-medium" id="strategy-level">Lv.0</span>
+                            </div>
+                            <div class="grid grid-cols-5 gap-2 mb-2">
+                                <button class="level-btn h-8 rounded bg-violet-100 hover:bg-violet-300 text-violet-700 text-xs font-bold" data-skill="strategy" data-level="1">1</button>
+                                <button class="level-btn h-8 rounded bg-violet-100 hover:bg-violet-300 text-violet-700 text-xs font-bold" data-skill="strategy" data-level="2">2</button>
+                                <button class="level-btn h-8 rounded bg-violet-100 hover:bg-violet-300 text-violet-700 text-xs font-bold" data-skill="strategy" data-level="3">3</button>
+                                <button class="level-btn h-8 rounded bg-violet-100 hover:bg-violet-300 text-violet-700 text-xs font-bold" data-skill="strategy" data-level="4">4</button>
+                                <button class="level-btn h-8 rounded bg-violet-100 hover:bg-violet-300 text-violet-700 text-xs font-bold" data-skill="strategy" data-level="5">5</button>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="skill-bar bg-violet-500 h-2 rounded-full" id="strategy-bar" style="width: 0%"></div>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2">競合分析、価格戦略、MD計画、予算管理</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Relationship Panel -->
+        <div class="glass-card rounded-2xl p-6 shadow-xl mt-6">
+            <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span class="text-2xl">🔗</span> スキルと売上要素の関連性マトリクス
+            </h2>
+            <p class="text-sm text-slate-500 mb-4">どのスキルがどの売上要素に貢献するかを示しています（◎: 強い関連、○: 関連あり）</p>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-3 text-left font-bold text-slate-700">スキル / 売上要素</th>
+                            <th class="p-3 text-center font-bold text-blue-600">SEO</th>
+                            <th class="p-3 text-center font-bold text-blue-600">広告</th>
+                            <th class="p-3 text-center font-bold text-blue-600">SNS</th>
+                            <th class="p-3 text-center font-bold text-green-600">UI/UX</th>
+                            <th class="p-3 text-center font-bold text-green-600">商品ページ</th>
+                            <th class="p-3 text-center font-bold text-green-600">カート</th>
+                            <th class="p-3 text-center font-bold text-amber-600">クロス/アップセル</th>
+                            <th class="p-3 text-center font-bold text-amber-600">価格戦略</th>
+                            <th class="p-3 text-center font-bold text-purple-600">LTV</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrix-body">
+                        <tr class="border-b hover:bg-slate-50 transition">
+                            <td class="p-3 font-medium">📣 マーケティング</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg text-slate-300">-</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg text-slate-300">-</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg text-slate-300">-</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                        </tr>
+                        <tr class="border-b hover:bg-slate-50 transition">
+                            <td class="p-3 font-medium">📈 データ分析</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                        </tr>
+                        <tr class="border-b hover:bg-slate-50 transition">
+                            <td class="p-3 font-medium">⚙️ サイト運用</td>
+                            <td class="p-3 text-center text-lg text-slate-300">-</td>
+                            <td class="p-3 text-center text-lg text-slate-300">-</td>
+                            <td class="p-3 text-center text-lg text-slate-300">-</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                        </tr>
+                        <tr class="border-b hover:bg-slate-50 transition">
+                            <td class="p-3 font-medium">🎨 クリエイティブ</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg text-slate-300">-</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg text-slate-300">-</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                        </tr>
+                        <tr class="border-b hover:bg-slate-50 transition">
+                            <td class="p-3 font-medium">🤝 顧客対応</td>
+                            <td class="p-3 text-center text-lg text-slate-300">-</td>
+                            <td class="p-3 text-center text-lg text-slate-300">-</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg text-slate-300">-</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg text-slate-300">-</td>
+                            <td class="p-3 text-center text-lg text-slate-300">-</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                        </tr>
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3 font-medium">🧠 戦略立案</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg">○</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                            <td class="p-3 text-center text-lg">◎</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Analysis & Recommendations -->
+        <div class="glass-card rounded-2xl p-6 shadow-xl mt-6">
+            <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span class="text-2xl">💡</span> スキルギャップ分析 & 成長アドバイス
+            </h2>
+            <div id="analysis-content" class="space-y-4">
+                <div class="bg-slate-100 rounded-xl p-4 text-center text-slate-500">
+                    <p>スキルレベルを入力すると、あなたの強みと成長ポイントを分析します</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Management -->
+        <div class="glass-card rounded-2xl p-6 shadow-xl mt-6">
+            <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span class="text-2xl">💾</span> データ管理
+            </h2>
+            <div class="flex flex-wrap gap-3">
+                <button id="save-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition transform hover:scale-105">
+                    💾 保存
+                </button>
+                <button id="reset-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg transition transform hover:scale-105">
+                    🔄 リセット
+                </button>
+                <button id="export-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition transform hover:scale-105">
+                    📤 エクスポート
+                </button>
+            </div>
+            <p id="save-status" class="text-sm text-slate-500 mt-3"></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // ===== State Management =====
+            const state = {
+                skills: {
+                    marketing: 0,
+                    analytics: 0,
+                    operations: 0,
+                    creative: 0,
+                    customer: 0,
+                    strategy: 0
+                }
+            };
+
+            // ===== Skill-Sales Element Mapping =====
+            const skillToElements = {
+                marketing: ['seo', 'ads', 'sns', 'email', 'product-page', 'cross-sell', 'up-sell', 'loyalty'],
+                analytics: ['seo', 'ads', 'sns', 'uiux', 'product-page', 'cart', 'payment', 'cross-sell', 'up-sell', 'pricing', 'loyalty'],
+                operations: ['uiux', 'product-page', 'cart', 'payment', 'cross-sell', 'bundle', 'pricing'],
+                creative: ['seo', 'ads', 'sns', 'uiux', 'product-page', 'cross-sell', 'up-sell'],
+                customer: ['sns', 'product-page', 'cart', 'cs', 'review', 'loyalty'],
+                strategy: ['seo', 'ads', 'sns', 'uiux', 'product-page', 'cart', 'cross-sell', 'up-sell', 'bundle', 'pricing', 'loyalty']
+            };
+
+            const elementToSkills = {
+                'seo': ['marketing', 'analytics', 'creative', 'strategy'],
+                'ads': ['marketing', 'analytics', 'creative', 'strategy'],
+                'sns': ['marketing', 'analytics', 'creative', 'customer', 'strategy'],
+                'email': ['marketing'],
+                'uiux': ['analytics', 'operations', 'creative', 'strategy'],
+                'product-page': ['marketing', 'analytics', 'operations', 'creative', 'customer', 'strategy'],
+                'cart': ['analytics', 'operations', 'customer', 'strategy'],
+                'payment': ['analytics', 'operations'],
+                'cross-sell': ['marketing', 'analytics', 'operations', 'creative', 'strategy'],
+                'up-sell': ['marketing', 'analytics', 'creative', 'strategy'],
+                'bundle': ['operations', 'strategy'],
+                'pricing': ['analytics', 'operations', 'strategy'],
+                'loyalty': ['marketing', 'analytics', 'operations', 'customer', 'strategy'],
+                'cs': ['customer'],
+                'review': ['customer']
+            };
+
+            const categoryToElements = {
+                'traffic': ['seo', 'ads', 'sns', 'email'],
+                'cvr': ['uiux', 'product-page', 'cart', 'payment'],
+                'aov': ['cross-sell', 'up-sell', 'bundle', 'pricing'],
+                'ltv': ['loyalty', 'cs', 'review']
+            };
+
+            // ===== Chart Setup =====
+            let radarChart = null;
+
+            const initRadarChart = () => {
+                const ctx = document.getElementById('skill-radar').getContext('2d');
+                radarChart = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['マーケティング', 'データ分析', 'サイト運用', 'クリエイティブ', '顧客対応', '戦略立案'],
+                        datasets: [{
+                            label: 'スキルレベル',
+                            data: [0, 0, 0, 0, 0, 0],
+                            fill: true,
+                            backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                            borderColor: 'rgb(99, 102, 241)',
+                            pointBackgroundColor: 'rgb(99, 102, 241)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(99, 102, 241)'
+                        }]
+                    },
+                    options: {
+                        elements: {
+                            line: { borderWidth: 3 }
+                        },
+                        scales: {
+                            r: {
+                                angleLines: { display: true },
+                                suggestedMin: 0,
+                                suggestedMax: 5,
+                                ticks: { stepSize: 1 }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            };
+
+            const updateRadarChart = () => {
+                if (radarChart) {
+                    radarChart.data.datasets[0].data = [
+                        state.skills.marketing,
+                        state.skills.analytics,
+                        state.skills.operations,
+                        state.skills.creative,
+                        state.skills.customer,
+                        state.skills.strategy
+                    ];
+                    radarChart.update();
+                }
+            };
+
+            // ===== UI Update Functions =====
+            const updateSkillDisplay = (skillName, level) => {
+                const levelElement = document.getElementById(`${skillName}-level`);
+                const barElement = document.getElementById(`${skillName}-bar`);
+                
+                if (levelElement) levelElement.textContent = `Lv.${level}`;
+                if (barElement) barElement.style.width = `${(level / 5) * 100}%`;
+                
+                // Update button active states
+                document.querySelectorAll(`[data-skill="${skillName}"]`).forEach(btn => {
+                    if (btn.classList.contains('level-btn')) {
+                        const btnLevel = parseInt(btn.dataset.level);
+                        if (btnLevel <= level) {
+                            btn.classList.add('active');
+                            btn.style.backgroundColor = getSkillColor(skillName);
+                            btn.style.color = 'white';
+                        } else {
+                            btn.classList.remove('active');
+                            btn.style.backgroundColor = '';
+                            btn.style.color = '';
+                        }
+                    }
+                });
+            };
+
+            const getSkillColor = (skillName) => {
+                const colors = {
+                    marketing: '#6366f1',
+                    analytics: '#06b6d4',
+                    operations: '#10b981',
+                    creative: '#ec4899',
+                    customer: '#f97316',
+                    strategy: '#8b5cf6'
+                };
+                return colors[skillName] || '#6366f1';
+            };
+
+            // ===== Highlight Functions =====
+            const clearHighlights = () => {
+                document.querySelectorAll('.tree-node').forEach(el => {
+                    el.classList.remove('highlighted');
+                    el.style.boxShadow = '';
+                });
+                document.querySelectorAll('.skill-card').forEach(el => {
+                    el.classList.remove('highlighted');
+                });
+            };
+
+            const highlightElements = (elements) => {
+                clearHighlights();
+                elements.forEach(elementId => {
+                    const el = document.querySelector(`[data-element="${elementId}"]`);
+                    if (el) {
+                        el.classList.add('highlighted');
+                        el.style.boxShadow = '0 0 15px rgba(245, 158, 11, 0.6)';
+                    }
+                });
+            };
+
+            const highlightSkills = (skills) => {
+                clearHighlights();
+                skills.forEach(skillName => {
+                    const card = document.querySelector(`.skill-card[data-skill="${skillName}"]`);
+                    if (card) {
+                        card.classList.add('highlighted');
+                    }
+                });
+            };
+
+            // ===== Analysis Functions =====
+            const generateAnalysis = () => {
+                const analysisContent = document.getElementById('analysis-content');
+                const totalSkill = Object.values(state.skills).reduce((a, b) => a + b, 0);
+                
+                if (totalSkill === 0) {
+                    analysisContent.innerHTML = `
+                        <div class="bg-slate-100 rounded-xl p-4 text-center text-slate-500">
+                            <p>スキルレベルを入力すると、あなたの強みと成長ポイントを分析します</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const skillEntries = Object.entries(state.skills);
+                const maxSkill = Math.max(...skillEntries.map(([_, v]) => v));
+                const minSkill = Math.min(...skillEntries.map(([_, v]) => v));
+                
+                const strengths = skillEntries.filter(([_, v]) => v >= 4).map(([k]) => getSkillDisplayName(k));
+                const weaknesses = skillEntries.filter(([_, v]) => v <= 2 && v > 0).map(([k]) => getSkillDisplayName(k));
+                const gaps = skillEntries.filter(([_, v]) => v === 0).map(([k]) => getSkillDisplayName(k));
+                
+                const avgSkill = totalSkill / 6;
+                let overallLevel = '';
+                let levelColor = '';
+                
+                if (avgSkill >= 4) {
+                    overallLevel = 'エキスパート';
+                    levelColor = 'text-purple-600';
+                } else if (avgSkill >= 3) {
+                    overallLevel = 'シニア';
+                    levelColor = 'text-blue-600';
+                } else if (avgSkill >= 2) {
+                    overallLevel = 'ミドル';
+                    levelColor = 'text-green-600';
+                } else if (avgSkill >= 1) {
+                    overallLevel = 'ジュニア';
+                    levelColor = 'text-amber-600';
+                } else {
+                    overallLevel = 'エントリー';
+                    levelColor = 'text-slate-600';
+                }
+
+                // Generate recommendations
+                const recommendations = generateRecommendations();
+
+                analysisContent.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-4 text-white">
+                            <h3 class="font-bold mb-2">📊 総合レベル</h3>
+                            <p class="text-3xl font-bold">${overallLevel}</p>
+                            <p class="text-sm opacity-80">平均スキル: ${avgSkill.toFixed(1)} / 5.0</p>
+                        </div>
+                        
+                        <div class="bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                            <h3 class="font-bold text-green-800 mb-2">💪 強み</h3>
+                            ${strengths.length > 0 
+                                ? `<ul class="text-sm text-green-700">${strengths.map(s => `<li>• ${s}</li>`).join('')}</ul>`
+                                : '<p class="text-sm text-green-600">Lv.4以上のスキルがありません</p>'
+                            }
+                        </div>
+                        
+                        <div class="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+                            <h3 class="font-bold text-amber-800 mb-2">📈 成長ポイント</h3>
+                            ${weaknesses.length > 0 || gaps.length > 0
+                                ? `<ul class="text-sm text-amber-700">
+                                    ${weaknesses.map(w => `<li>• ${w} (要強化)</li>`).join('')}
+                                    ${gaps.map(g => `<li>• ${g} (未評価)</li>`).join('')}
+                                </ul>`
+                                : '<p class="text-sm text-amber-600">バランスの取れたスキルセットです！</p>'
+                            }
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mt-4">
+                        <h3 class="font-bold text-blue-800 mb-3">🎯 おすすめアクション</h3>
+                        <div class="space-y-2">
+                            ${recommendations.map(rec => `
+                                <div class="flex items-start gap-2 text-sm text-blue-700">
+                                    <span class="text-blue-500">▶</span>
+                                    <span>${rec}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4">
+                        <h3 class="font-bold text-slate-800 mb-3">📊 売上貢献度予測</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-blue-600">${calculateContribution('traffic')}%</div>
+                                <div class="text-xs text-slate-500">集客力</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-green-600">${calculateContribution('cvr')}%</div>
+                                <div class="text-xs text-slate-500">転換力</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-amber-600">${calculateContribution('aov')}%</div>
+                                <div class="text-xs text-slate-500">客単価向上力</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-purple-600">${calculateContribution('ltv')}%</div>
+                                <div class="text-xs text-slate-500">LTV向上力</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            const getSkillDisplayName = (skillKey) => {
+                const names = {
+                    marketing: 'マーケティング',
+                    analytics: 'データ分析',
+                    operations: 'サイト運用',
+                    creative: 'クリエイティブ',
+                    customer: '顧客対応',
+                    strategy: '戦略立案'
+                };
+                return names[skillKey] || skillKey;
+            };
+
+            const generateRecommendations = () => {
+                const recs = [];
+                const { marketing, analytics, operations, creative, customer, strategy } = state.skills;
+                
+                if (analytics < 3) {
+                    recs.push('データ分析力を強化すると、全ての施策の効果測定・改善が可能になります。GA4の学習をおすすめします。');
+                }
+                if (marketing >= 3 && analytics < 3) {
+                    recs.push('マーケティングスキルを活かすため、データ分析で施策効果を可視化しましょう。');
+                }
+                if (creative < 3 && marketing >= 3) {
+                    recs.push('クリエイティブスキルを向上させると、広告・SNSのパフォーマンスが向上します。');
+                }
+                if (customer < 3 && operations >= 3) {
+                    recs.push('顧客対応力を強化すると、リピート率・LTVの向上につながります。');
+                }
+                if (strategy < 3) {
+                    recs.push('戦略立案力を高めると、各施策の優先順位付けと予算配分が最適化できます。');
+                }
+                if (operations < 2) {
+                    recs.push('サイト運用の基礎を固めると、日々のオペレーションが効率化されます。');
+                }
+                
+                if (recs.length === 0) {
+                    recs.push('素晴らしいスキルバランスです！次は各スキルをLv.5に引き上げ、専門性を高めましょう。');
+                    recs.push('後輩の育成やチーム全体のスキルアップに貢献することで、さらなる成長が期待できます。');
+                }
+                
+                return recs.slice(0, 4);
+            };
+
+            const calculateContribution = (category) => {
+                const weights = {
+                    traffic: { marketing: 0.4, analytics: 0.2, creative: 0.3, strategy: 0.1 },
+                    cvr: { analytics: 0.3, operations: 0.3, creative: 0.2, customer: 0.1, strategy: 0.1 },
+                    aov: { analytics: 0.2, operations: 0.2, creative: 0.1, strategy: 0.5 },
+                    ltv: { marketing: 0.2, analytics: 0.2, customer: 0.4, strategy: 0.2 }
+                };
+                
+                const categoryWeights = weights[category];
+                let score = 0;
+                for (const [skill, weight] of Object.entries(categoryWeights)) {
+                    score += (state.skills[skill] / 5) * weight * 100;
+                }
+                return Math.round(score);
+            };
+
+            // ===== Event Handlers =====
+            const handleSkillLevelClick = (e) => {
+                const btn = e.target;
+                if (!btn.classList.contains('level-btn')) return;
+                
+                const skill = btn.dataset.skill;
+                const level = parseInt(btn.dataset.level);
+                
+                // Toggle: if clicking current level, set to 0
+                if (state.skills[skill] === level) {
+                    state.skills[skill] = 0;
+                } else {
+                    state.skills[skill] = level;
+                }
+                
+                updateSkillDisplay(skill, state.skills[skill]);
+                updateRadarChart();
+                generateAnalysis();
+            };
+
+            const handleSkillCardClick = (e) => {
+                const card = e.target.closest('.skill-card');
+                if (!card || e.target.classList.contains('level-btn')) return;
+                
+                const skill = card.dataset.skill;
+                const elements = skillToElements[skill] || [];
+                highlightElements(elements);
+            };
+
+            const handleTreeNodeClick = (e) => {
+                const node = e.target.closest('.tree-node');
+                if (!node) return;
+                
+                const element = node.dataset.element;
+                const category = node.dataset.category;
+                
+                if (element) {
+                    const skills = elementToSkills[element] || [];
+                    highlightSkills(skills);
+                } else if (category) {
+                    const elements = categoryToElements[category] || [];
+                    // Get all skills related to category elements
+                    const relatedSkills = new Set();
+                    elements.forEach(el => {
+                        (elementToSkills[el] || []).forEach(s => relatedSkills.add(s));
+                    });
+                    highlightSkills([...relatedSkills]);
+                }
+            };
+
+            // ===== Persistence =====
+            const STORAGE_KEY = 'ec-skill-sales-map';
+
+            const saveState = () => {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                    document.getElementById('save-status').textContent = '✅ 保存しました！ (' + new Date().toLocaleTimeString() + ')';
+                } catch (e) {
+                    console.error('Save failed:', e);
+                    document.getElementById('save-status').textContent = '❌ 保存に失敗しました';
+                }
+            };
+
+            const loadState = () => {
+                try {
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        Object.assign(state.skills, parsed.skills || {});
+                        return true;
+                    }
+                } catch (e) {
+                    console.error('Load failed:', e);
+                }
+                return false;
+            };
+
+            const resetState = () => {
+                if (confirm('全てのデータをリセットしますか？')) {
+                    Object.keys(state.skills).forEach(key => state.skills[key] = 0);
+                    localStorage.removeItem(STORAGE_KEY);
+                    
+                    Object.keys(state.skills).forEach(skill => updateSkillDisplay(skill, 0));
+                    updateRadarChart();
+                    generateAnalysis();
+                    clearHighlights();
+                    
+                    document.getElementById('save-status').textContent = '🔄 リセットしました';
+                }
+            };
+
+            const exportData = () => {
+                const data = {
+                    skills: state.skills,
+                    exportDate: new Date().toISOString(),
+                    analysis: {
+                        avgLevel: (Object.values(state.skills).reduce((a, b) => a + b, 0) / 6).toFixed(1),
+                        contributions: {
+                            traffic: calculateContribution('traffic'),
+                            cvr: calculateContribution('cvr'),
+                            aov: calculateContribution('aov'),
+                            ltv: calculateContribution('ltv')
+                        }
+                    }
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ec-skill-map-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                document.getElementById('save-status').textContent = '📤 エクスポートしました';
+            };
+
+            // ===== Initialize =====
+            const init = () => {
+                // Load saved state
+                loadState();
+                
+                // Initialize chart
+                initRadarChart();
+                
+                // Update UI with loaded state
+                Object.entries(state.skills).forEach(([skill, level]) => {
+                    updateSkillDisplay(skill, level);
+                });
+                updateRadarChart();
+                generateAnalysis();
+                
+                // Event listeners
+                document.getElementById('skill-cards').addEventListener('click', handleSkillLevelClick);
+                document.getElementById('skill-cards').addEventListener('click', handleSkillCardClick);
+                document.getElementById('sales-tree').addEventListener('click', handleTreeNodeClick);
+                
+                document.getElementById('save-btn').addEventListener('click', saveState);
+                document.getElementById('reset-btn').addEventListener('click', resetState);
+                document.getElementById('export-btn').addEventListener('click', exportData);
+                
+                // Clear highlights on outside click
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.tree-node') && !e.target.closest('.skill-card')) {
+                        clearHighlights();
+                    }
+                });
+            };
+
+            init();
+        });
+    </script>
+</body>
+</html>
