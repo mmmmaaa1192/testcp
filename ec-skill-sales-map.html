@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EC担当者スキルマップ × 売り上げ構造 可視化</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .panel {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .panel h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        #sales-tree {
+            min-height: 600px;
+        }
+
+        #skill-map {
+            min-height: 600px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .connection-panel {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .connection-panel h2 {
+            color: white;
+            border-bottom-color: white;
+        }
+
+        .node circle {
+            cursor: pointer;
+            stroke: #667eea;
+            stroke-width: 3px;
+        }
+
+        .node text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .link {
+            fill: none;
+            stroke: #ccc;
+            stroke-width: 2px;
+        }
+
+        .node.selected circle {
+            stroke: #f5576c;
+            stroke-width: 4px;
+            filter: drop-shadow(0 0 10px #f5576c);
+        }
+
+        .skill-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s;
+        }
+
+        .skill-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .skill-item.related {
+            border-left-color: #f5576c;
+            background: #fff5f7;
+        }
+
+        .skill-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .skill-name {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .skill-level {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .skill-description {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+
+        .related-sales {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
+
+        .sales-tag {
+            background: #e0e7ff;
+            color: #4c51bf;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .controls {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 20px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        #connection-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 EC担当者スキルマップ × 売り上げ構造</h1>
+            <p class="subtitle">スキルと売り上げ要素の関連性を可視化</p>
+        </header>
+
+        <div class="main-content">
+            <div class="panel">
+                <h2>📊 EC売り上げ構造ツリー</h2>
+                <div id="sales-tree"></div>
+            </div>
+
+            <div class="panel">
+                <h2>💡 EC担当者スキルマップ</h2>
+                <div id="skill-map"></div>
+            </div>
+
+            <div class="panel connection-panel">
+                <h2>🔗 スキルと売り上げ要素の関連性</h2>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4ade80;"></div>
+                        <span>高影響</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #fbbf24;"></div>
+                        <span>中影響</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #60a5fa;"></div>
+                        <span>低影響</span>
+                    </div>
+                </div>
+                <div id="connection-list"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="resetSelection()">選択をリセット</button>
+            <button onclick="expandAll()">すべて展開</button>
+            <button onclick="collapseAll()">すべて折りたたむ</button>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // EC売り上げ構造のデータ定義
+        const salesData = {
+            name: "EC売上",
+            value: "100%",
+            description: "総合的なEC売上",
+            children: [
+                {
+                    name: "集客",
+                    value: "訪問者数",
+                    description: "サイトへの流入",
+                    children: [
+                        {
+                            name: "SEO",
+                            value: "自然検索",
+                            description: "検索エンジン最適化"
+                        },
+                        {
+                            name: "広告",
+                            value: "有料広告",
+                            description: "リスティング・ディスプレイ広告",
+                            children: [
+                                { name: "リスティング", value: "検索連動型", description: "Google/Yahoo広告" },
+                                { name: "SNS広告", value: "ソーシャル", description: "Facebook/Instagram広告" },
+                                { name: "ディスプレイ", value: "バナー広告", description: "GDN/YDA" }
+                            ]
+                        },
+                        {
+                            name: "SNS",
+                            value: "ソーシャルメディア",
+                            description: "SNSからの流入"
+                        },
+                        {
+                            name: "メール",
+                            value: "メルマガ",
+                            description: "既存顧客へのアプローチ"
+                        }
+                    ]
+                },
+                {
+                    name: "転換率",
+                    value: "CVR",
+                    description: "訪問者の購入転換",
+                    children: [
+                        {
+                            name: "サイト設計",
+                            value: "UX/UI",
+                            description: "使いやすさ・見やすさ",
+                            children: [
+                                { name: "ナビゲーション", value: "導線設計", description: "商品への誘導" },
+                                { name: "検索機能", value: "商品検索", description: "商品の見つけやすさ" },
+                                { name: "モバイル対応", value: "レスポンシブ", description: "スマホ最適化" }
+                            ]
+                        },
+                        {
+                            name: "商品ページ",
+                            value: "商品詳細",
+                            description: "商品情報の充実度",
+                            children: [
+                                { name: "商品画像", value: "ビジュアル", description: "高品質な画像" },
+                                { name: "商品説明", value: "コピーライティング", description: "魅力的な説明文" },
+                                { name: "レビュー", value: "口コミ", description: "顧客レビュー" }
+                            ]
+                        },
+                        {
+                            name: "決済プロセス",
+                            value: "購入フロー",
+                            description: "購入のしやすさ",
+                            children: [
+                                { name: "カート", value: "カート機能", description: "分かりやすいカート" },
+                                { name: "決済方法", value: "支払い選択", description: "多様な決済手段" },
+                                { name: "入力フォーム", value: "EFO", description: "入力のしやすさ" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    name: "客単価",
+                    value: "AOV",
+                    description: "1回あたりの購入金額",
+                    children: [
+                        {
+                            name: "アップセル",
+                            value: "上位商品",
+                            description: "より高額な商品の提案"
+                        },
+                        {
+                            name: "クロスセル",
+                            value: "関連商品",
+                            description: "関連商品の提案"
+                        },
+                        {
+                            name: "セット販売",
+                            value: "バンドル",
+                            description: "まとめ買い促進"
+                        },
+                        {
+                            name: "送料施策",
+                            value: "送料無料ライン",
+                            description: "送料無料の閾値設定"
+                        }
+                    ]
+                },
+                {
+                    name: "購入頻度",
+                    value: "リピート率",
+                    description: "顧客の再購入",
+                    children: [
+                        {
+                            name: "CRM",
+                            value: "顧客関係管理",
+                            description: "顧客との関係構築",
+                            children: [
+                                { name: "メルマガ", value: "メール配信", description: "定期的な情報提供" },
+                                { name: "LINE", value: "LINE配信", description: "LINEでの接点" },
+                                { name: "セグメント配信", value: "パーソナライズ", description: "属性別配信" }
+                            ]
+                        },
+                        {
+                            name: "ロイヤリティ",
+                            value: "顧客育成",
+                            description: "ファン化施策",
+                            children: [
+                                { name: "ポイント", value: "ポイント制度", description: "ポイント還元" },
+                                { name: "会員ランク", value: "ランク制度", description: "ランク別特典" },
+                                { name: "定期購入", value: "サブスク", description: "定期購入促進" }
+                            ]
+                        },
+                        {
+                            name: "アフターサービス",
+                            value: "購入後フォロー",
+                            description: "購入後の満足度向上"
+                        }
+                    ]
+                }
+            ]
+        };
+
+        // スキルマップのデータ定義
+        const skillsData = [
+            {
+                id: "skill1",
+                name: "SEO・コンテンツマーケティング",
+                category: "集客",
+                level: 5,
+                description: "検索エンジン最適化とコンテンツ戦略",
+                relatedSales: ["SEO", "集客"],
+                impact: "high"
+            },
+            {
+                id: "skill2",
+                name: "Web広告運用",
+                category: "集客",
+                level: 4,
+                description: "リスティング・ディスプレイ・SNS広告の運用",
+                relatedSales: ["広告", "リスティング", "SNS広告", "ディスプレイ", "集客"],
+                impact: "high"
+            },
+            {
+                id: "skill3",
+                name: "SNSマーケティング",
+                category: "集客",
+                level: 4,
+                description: "SNSでの情報発信とコミュニティ運営",
+                relatedSales: ["SNS", "集客"],
+                impact: "medium"
+            },
+            {
+                id: "skill4",
+                name: "メールマーケティング",
+                category: "集客・リピート",
+                level: 4,
+                description: "メルマガ・ステップメール配信",
+                relatedSales: ["メール", "メルマガ", "CRM", "集客", "購入頻度"],
+                impact: "high"
+            },
+            {
+                id: "skill5",
+                name: "UI/UX設計",
+                category: "転換",
+                level: 3,
+                description: "ユーザーインターフェース・体験設計",
+                relatedSales: ["サイト設計", "ナビゲーション", "モバイル対応", "転換率"],
+                impact: "high"
+            },
+            {
+                id: "skill6",
+                name: "コピーライティング",
+                category: "転換",
+                level: 4,
+                description: "魅力的な商品説明・広告文作成",
+                relatedSales: ["商品説明", "商品ページ", "転換率"],
+                impact: "high"
+            },
+            {
+                id: "skill7",
+                name: "撮影・画像編集",
+                category: "転換",
+                level: 3,
+                description: "商品画像の撮影と編集",
+                relatedSales: ["商品画像", "商品ページ", "転換率"],
+                impact: "medium"
+            },
+            {
+                id: "skill8",
+                name: "データ分析",
+                category: "全般",
+                level: 5,
+                description: "Google Analytics等でのデータ分析",
+                relatedSales: ["EC売上", "集客", "転換率", "客単価", "購入頻度"],
+                impact: "high"
+            },
+            {
+                id: "skill9",
+                name: "CRM・顧客管理",
+                category: "リピート",
+                level: 4,
+                description: "顧客データ管理とセグメント配信",
+                relatedSales: ["CRM", "セグメント配信", "購入頻度"],
+                impact: "high"
+            },
+            {
+                id: "skill10",
+                name: "カスタマーサポート",
+                category: "リピート",
+                level: 4,
+                description: "問い合わせ対応と顧客満足度向上",
+                relatedSales: ["アフターサービス", "購入頻度", "転換率"],
+                impact: "medium"
+            },
+            {
+                id: "skill11",
+                name: "マーチャンダイジング",
+                category: "客単価",
+                level: 3,
+                description: "商品企画・価格戦略",
+                relatedSales: ["アップセル", "クロスセル", "セット販売", "客単価"],
+                impact: "high"
+            },
+            {
+                id: "skill12",
+                name: "在庫管理・物流",
+                category: "運営",
+                level: 3,
+                description: "在庫管理と配送最適化",
+                relatedSales: ["送料施策", "アフターサービス"],
+                impact: "medium"
+            },
+            {
+                id: "skill13",
+                name: "HTML/CSS/JavaScript",
+                category: "技術",
+                level: 3,
+                description: "サイトカスタマイズ・改善",
+                relatedSales: ["サイト設計", "商品ページ", "決済プロセス", "転換率"],
+                impact: "medium"
+            },
+            {
+                id: "skill14",
+                name: "LPO・EFO",
+                category: "転換",
+                level: 4,
+                description: "ランディングページ・フォーム最適化",
+                relatedSales: ["入力フォーム", "決済プロセス", "転換率"],
+                impact: "high"
+            },
+            {
+                id: "skill15",
+                name: "プロジェクト管理",
+                category: "全般",
+                level: 4,
+                description: "施策の企画・実行・管理",
+                relatedSales: ["EC売上"],
+                impact: "low"
+            }
+        ];
+
+        // ツリー図の描画
+        let selectedNode = null;
+        let root, svg, gLink, gNode;
+
+        function createSalesTree() {
+            const width = document.getElementById('sales-tree').clientWidth;
+            const height = 600;
+
+            svg = d3.select("#sales-tree")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            const g = svg.append("g")
+                .attr("transform", "translate(40,20)");
+
+            gLink = g.append("g").attr("class", "links");
+            gNode = g.append("g").attr("class", "nodes");
+
+            const treeLayout = d3.tree()
+                .size([height - 40, width - 200]);
+
+            root = d3.hierarchy(salesData);
+            root.x0 = height / 2;
+            root.y0 = 0;
+
+            // 初期状態では2階層まで展開
+            root.children.forEach(collapse);
+            
+            function collapse(d) {
+                if (d.children) {
+                    d._children = d.children;
+                    d._children.forEach(collapse);
+                    d.children = null;
+                }
+            }
+
+            update(root);
+
+            function update(source) {
+                const treeData = treeLayout(root);
+                const nodes = treeData.descendants();
+                const links = treeData.links();
+
+                nodes.forEach(d => { d.y = d.depth * 180; });
+
+                // ノードの更新
+                const node = gNode.selectAll("g")
+                    .data(nodes, d => d.id || (d.id = ++i));
+
+                const nodeEnter = node.enter().append("g")
+                    .attr("class", "node")
+                    .attr("transform", d => `translate(${source.y0},${source.x0})`)
+                    .on("click", clicked);
+
+                nodeEnter.append("circle")
+                    .attr("r", 8)
+                    .style("fill", d => {
+                        if (d._children) return "#764ba2";
+                        return d.children ? "#667eea" : "#4ade80";
+                    });
+
+                nodeEnter.append("text")
+                    .attr("dy", ".35em")
+                    .attr("x", d => d.children || d._children ? -13 : 13)
+                    .attr("text-anchor", d => d.children || d._children ? "end" : "start")
+                    .text(d => d.data.name)
+                    .style("fill-opacity", 1);
+
+                const nodeUpdate = nodeEnter.merge(node);
+
+                nodeUpdate.transition()
+                    .duration(750)
+                    .attr("transform", d => `translate(${d.y},${d.x})`);
+
+                nodeUpdate.select("circle")
+                    .style("fill", d => {
+                        if (d._children) return "#764ba2";
+                        return d.children ? "#667eea" : "#4ade80";
+                    });
+
+                const nodeExit = node.exit().transition()
+                    .duration(750)
+                    .attr("transform", d => `translate(${source.y},${source.x})`)
+                    .remove();
+
+                nodeExit.select("circle")
+                    .attr("r", 1e-6);
+
+                nodeExit.select("text")
+                    .style("fill-opacity", 1e-6);
+
+                // リンクの更新
+                const link = gLink.selectAll("path")
+                    .data(links, d => d.target.id);
+
+                const linkEnter = link.enter().insert("path", "g")
+                    .attr("class", "link")
+                    .attr("d", d => {
+                        const o = {x: source.x0, y: source.y0};
+                        return diagonal(o, o);
+                    });
+
+                const linkUpdate = linkEnter.merge(link);
+
+                linkUpdate.transition()
+                    .duration(750)
+                    .attr("d", d => diagonal(d.source, d.target));
+
+                link.exit().transition()
+                    .duration(750)
+                    .attr("d", d => {
+                        const o = {x: source.x, y: source.y};
+                        return diagonal(o, o);
+                    })
+                    .remove();
+
+                nodes.forEach(d => {
+                    d.x0 = d.x;
+                    d.y0 = d.y;
+                });
+
+                // ツールチップ
+                nodeEnter.on("mouseover", function(event, d) {
+                    const tooltip = document.getElementById('tooltip');
+                    tooltip.innerHTML = `
+                        <strong>${d.data.name}</strong><br>
+                        ${d.data.description}<br>
+                        <em>${d.data.value}</em>
+                    `;
+                    tooltip.style.left = event.pageX + 10 + 'px';
+                    tooltip.style.top = event.pageY - 30 + 'px';
+                    tooltip.style.opacity = 1;
+                })
+                .on("mouseout", function() {
+                    document.getElementById('tooltip').style.opacity = 0;
+                });
+            }
+
+            function diagonal(s, d) {
+                return `M ${s.y} ${s.x}
+                        C ${(s.y + d.y) / 2} ${s.x},
+                          ${(s.y + d.y) / 2} ${d.x},
+                          ${d.y} ${d.x}`;
+            }
+
+            let i = 0;
+
+            function clicked(event, d) {
+                if (d.children) {
+                    d._children = d.children;
+                    d.children = null;
+                } else {
+                    d.children = d._children;
+                    d._children = null;
+                }
+
+                // 選択状態の管理
+                d3.selectAll(".node").classed("selected", false);
+                d3.select(this).classed("selected", true);
+                selectedNode = d.data.name;
+
+                update(d);
+                highlightRelatedSkills(d.data.name);
+            }
+        }
+
+        // スキルマップの描画
+        function createSkillMap() {
+            const container = document.getElementById('skill-map');
+            container.innerHTML = '';
+
+            const categories = [...new Set(skillsData.map(s => s.category))];
+            
+            categories.forEach(category => {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.style.width = '100%';
+                categoryDiv.style.marginBottom = '20px';
+                
+                const categoryHeader = document.createElement('h3');
+                categoryHeader.textContent = category;
+                categoryHeader.style.color = '#667eea';
+                categoryHeader.style.marginBottom = '10px';
+                categoryDiv.appendChild(categoryHeader);
+
+                const categorySkills = skillsData.filter(s => s.category === category);
+                
+                categorySkills.forEach(skill => {
+                    const skillDiv = document.createElement('div');
+                    skillDiv.className = 'skill-item';
+                    skillDiv.id = skill.id;
+                    
+                    const skillHeader = document.createElement('div');
+                    skillHeader.className = 'skill-header';
+                    
+                    const skillName = document.createElement('div');
+                    skillName.className = 'skill-name';
+                    skillName.textContent = skill.name;
+                    
+                    const skillLevel = document.createElement('div');
+                    skillLevel.className = 'skill-level';
+                    skillLevel.textContent = `Lv ${skill.level}`;
+                    skillLevel.style.background = 
+                        skill.impact === 'high' ? '#4ade80' :
+                        skill.impact === 'medium' ? '#fbbf24' : '#60a5fa';
+                    
+                    skillHeader.appendChild(skillName);
+                    skillHeader.appendChild(skillLevel);
+                    
+                    const skillDesc = document.createElement('div');
+                    skillDesc.className = 'skill-description';
+                    skillDesc.textContent = skill.description;
+                    
+                    const relatedDiv = document.createElement('div');
+                    relatedDiv.className = 'related-sales';
+                    skill.relatedSales.forEach(sales => {
+                        const tag = document.createElement('span');
+                        tag.className = 'sales-tag';
+                        tag.textContent = sales;
+                        relatedDiv.appendChild(tag);
+                    });
+                    
+                    skillDiv.appendChild(skillHeader);
+                    skillDiv.appendChild(skillDesc);
+                    skillDiv.appendChild(relatedDiv);
+                    
+                    skillDiv.addEventListener('click', () => {
+                        document.querySelectorAll('.skill-item').forEach(el => {
+                            el.classList.remove('related');
+                        });
+                        skillDiv.classList.add('related');
+                        highlightRelatedSalesNodes(skill.relatedSales);
+                    });
+                    
+                    categoryDiv.appendChild(skillDiv);
+                });
+                
+                container.appendChild(categoryDiv);
+            });
+        }
+
+        // 関連スキルのハイライト
+        function highlightRelatedSkills(salesNode) {
+            document.querySelectorAll('.skill-item').forEach(el => {
+                el.classList.remove('related');
+            });
+
+            skillsData.forEach(skill => {
+                if (skill.relatedSales.includes(salesNode)) {
+                    document.getElementById(skill.id).classList.add('related');
+                }
+            });
+
+            updateConnectionList(salesNode);
+        }
+
+        // 関連する売上ノードのハイライト（視覚的フィードバック）
+        function highlightRelatedSalesNodes(relatedSales) {
+            // ここでは既存の選択状態をリセット
+            d3.selectAll(".node").classed("selected", false);
+            
+            // 関連情報を表示
+            updateConnectionListBySkill(relatedSales);
+        }
+
+        // 関連性リストの更新
+        function updateConnectionList(salesNode) {
+            const list = document.getElementById('connection-list');
+            list.innerHTML = '';
+
+            const relatedSkills = skillsData.filter(skill => 
+                skill.relatedSales.includes(salesNode)
+            );
+
+            if (relatedSkills.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: white;">売上要素を選択すると、関連するスキルが表示されます</p>';
+                return;
+            }
+
+            relatedSkills.forEach(skill => {
+                const item = document.createElement('div');
+                item.className = 'skill-item';
+                
+                const impactColor = 
+                    skill.impact === 'high' ? '#4ade80' :
+                    skill.impact === 'medium' ? '#fbbf24' : '#60a5fa';
+                
+                item.style.borderLeftColor = impactColor;
+                
+                item.innerHTML = `
+                    <div class="skill-header">
+                        <div class="skill-name">${skill.name}</div>
+                        <div class="skill-level" style="background: ${impactColor}">
+                            ${skill.impact === 'high' ? '高影響' : skill.impact === 'medium' ? '中影響' : '低影響'}
+                        </div>
+                    </div>
+                    <div class="skill-description">${skill.description}</div>
+                `;
+                
+                list.appendChild(item);
+            });
+        }
+
+        // スキルから関連性を表示
+        function updateConnectionListBySkill(relatedSales) {
+            const list = document.getElementById('connection-list');
+            list.innerHTML = '<h3 style="color: white; margin-bottom: 15px;">関連する売上要素:</h3>';
+
+            relatedSales.forEach(sales => {
+                const item = document.createElement('div');
+                item.className = 'skill-item';
+                item.innerHTML = `
+                    <div class="skill-name">${sales}</div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // コントロール関数
+        function resetSelection() {
+            selectedNode = null;
+            d3.selectAll(".node").classed("selected", false);
+            document.querySelectorAll('.skill-item').forEach(el => {
+                el.classList.remove('related');
+            });
+            document.getElementById('connection-list').innerHTML = 
+                '<p style="text-align: center; color: white;">売上要素またはスキルを選択してください</p>';
+        }
+
+        function expandAll() {
+            root.descendants().forEach(d => {
+                if (d._children) {
+                    d.children = d._children;
+                    d._children = null;
+                }
+            });
+            update(root);
+        }
+
+        function collapseAll() {
+            root.descendants().forEach(d => {
+                if (d.children && d.depth > 0) {
+                    d._children = d.children;
+                    d.children = null;
+                }
+            });
+            update(root);
+        }
+
+        function update(source) {
+            const treeData = d3.tree().size([600 - 40, document.getElementById('sales-tree').clientWidth - 200])(root);
+            const nodes = treeData.descendants();
+            const links = treeData.links();
+
+            nodes.forEach(d => { d.y = d.depth * 180; });
+
+            const node = gNode.selectAll("g")
+                .data(nodes, d => d.id || (d.id = ++nodeIdCounter));
+
+            const nodeEnter = node.enter().append("g")
+                .attr("class", "node")
+                .attr("transform", d => `translate(${source.y0},${source.x0})`)
+                .on("click", clicked);
+
+            nodeEnter.append("circle")
+                .attr("r", 8)
+                .style("fill", d => {
+                    if (d._children) return "#764ba2";
+                    return d.children ? "#667eea" : "#4ade80";
+                });
+
+            nodeEnter.append("text")
+                .attr("dy", ".35em")
+                .attr("x", d => d.children || d._children ? -13 : 13)
+                .attr("text-anchor", d => d.children || d._children ? "end" : "start")
+                .text(d => d.data.name)
+                .style("fill-opacity", 1);
+
+            const nodeUpdate = nodeEnter.merge(node);
+
+            nodeUpdate.transition()
+                .duration(750)
+                .attr("transform", d => `translate(${d.y},${d.x})`);
+
+            nodeUpdate.select("circle")
+                .style("fill", d => {
+                    if (d._children) return "#764ba2";
+                    return d.children ? "#667eea" : "#4ade80";
+                });
+
+            node.exit().transition()
+                .duration(750)
+                .attr("transform", d => `translate(${source.y},${source.x})`)
+                .remove();
+
+            const link = gLink.selectAll("path")
+                .data(links, d => d.target.id);
+
+            const linkEnter = link.enter().insert("path", "g")
+                .attr("class", "link")
+                .attr("d", d => {
+                    const o = {x: source.x0, y: source.y0};
+                    return diagonal(o, o);
+                });
+
+            linkEnter.merge(link).transition()
+                .duration(750)
+                .attr("d", d => diagonal(d.source, d.target));
+
+            link.exit().transition()
+                .duration(750)
+                .attr("d", d => {
+                    const o = {x: source.x, y: source.y};
+                    return diagonal(o, o);
+                })
+                .remove();
+
+            nodes.forEach(d => {
+                d.x0 = d.x;
+                d.y0 = d.y;
+            });
+
+            nodeEnter.on("mouseover", function(event, d) {
+                const tooltip = document.getElementById('tooltip');
+                tooltip.innerHTML = `
+                    <strong>${d.data.name}</strong><br>
+                    ${d.data.description}<br>
+                    <em>${d.data.value}</em>
+                `;
+                tooltip.style.left = event.pageX + 10 + 'px';
+                tooltip.style.top = event.pageY - 30 + 'px';
+                tooltip.style.opacity = 1;
+            })
+            .on("mouseout", function() {
+                document.getElementById('tooltip').style.opacity = 0;
+            });
+        }
+
+        function diagonal(s, d) {
+            return `M ${s.y} ${s.x}
+                    C ${(s.y + d.y) / 2} ${s.x},
+                      ${(s.y + d.y) / 2} ${d.x},
+                      ${d.y} ${d.x}`;
+        }
+
+        let nodeIdCounter = 0;
+
+        function clicked(event, d) {
+            if (d.children) {
+                d._children = d.children;
+                d.children = null;
+            } else {
+                d.children = d._children;
+                d._children = null;
+            }
+
+            d3.selectAll(".node").classed("selected", false);
+            d3.select(this).classed("selected", true);
+            selectedNode = d.data.name;
+
+            update(d);
+            highlightRelatedSkills(d.data.name);
+        }
+
+        // 初期化
+        window.addEventListener('load', () => {
+            createSalesTree();
+            createSkillMap();
+            document.getElementById('connection-list').innerHTML = 
+                '<p style="text-align: center; color: white;">売上要素またはスキルを選択してください</p>';
+        });
+    </script>
+</body>
+</html>
