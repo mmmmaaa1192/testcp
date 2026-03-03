@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>寝たらあした — 人と生き物・自然を中心とした生死にまつわるWEBメディア</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500;700&family=Zen+Old+Mincho:wght@400;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  ::selection { background: #2C2C2C; color: #FAF8F5; }
+  body {
+    font-family: 'Noto Serif JP', 'Georgia', serif;
+    background: #FAF8F5; color: #1A1A1A;
+    overflow-x: hidden; -webkit-font-smoothing: antialiased;
+  }
+  .masthead-title { font-family: 'Zen Old Mincho', serif; font-weight: 700; letter-spacing: 0.15em; }
+  .cat-label { font-family: 'DM Serif Display', serif; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; }
+  .article-title { font-family: 'Zen Old Mincho', serif; line-height: 1.6; font-weight: 700; white-space: pre-line; }
+  .body-text { font-family: 'Noto Serif JP', serif; font-weight: 300; line-height: 1.9; }
+  .tag-pill {
+    font-family: 'DM Serif Display', serif; font-size: 9px;
+    letter-spacing: 0.25em; text-transform: uppercase;
+    border: 1px solid currentColor; padding: 3px 10px; display: inline-block;
+  }
+  .section-label { font-family: 'DM Serif Display', serif; font-size: 12px; letter-spacing: 0.25em; text-transform: uppercase; opacity: 0.4; }
+  .section-sub { font-size: 11px; opacity: 0.3; }
+  .hover-line { position: relative; text-decoration: none; color: inherit; cursor: pointer; }
+  .hover-line::after {
+    content: ''; position: absolute; bottom: -2px; left: 0;
+    width: 0; height: 1px; background: currentColor;
+    transition: width 0.4s cubic-bezier(0.23,1,0.32,1);
+  }
+  .hover-line:hover::after { width: 100%; }
+  .reveal {
+    opacity: 0; transform: translateY(32px);
+    transition: opacity 0.8s cubic-bezier(0.23,1,0.32,1), transform 0.8s cubic-bezier(0.23,1,0.32,1);
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  .noise-overlay {
+    position: fixed; inset: 0; pointer-events: none; z-index: 9999; opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+  .site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    padding: 16px 32px; display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid transparent; transition: background 0.3s, border-bottom 0.3s;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .header-right { display: flex; align-items: center; gap: 28px; }
+  .header-tagline { font-size: 10px; letter-spacing: 0.15em; opacity: 0.5; font-family: 'DM Serif Display', serif; }
+  .menu-btn { background: none; border: none; cursor: pointer; display: flex; flex-direction: column; gap: 5px; padding: 4px; }
+  .menu-btn span { display: block; height: 1.5px; background: #1A1A1A; }
+  .menu-btn span:first-child { width: 22px; }
+  .menu-btn span:last-child { width: 16px; margin-left: 6px; }
+  .menu-overlay {
+    position: fixed; inset: 0; background: #1A1A1A; color: #FAF8F5; z-index: 1000;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    opacity: 0; visibility: hidden; transition: opacity 0.5s, visibility 0.5s;
+  }
+  .menu-overlay.open { opacity: 1; visibility: visible; }
+  .menu-close { position: absolute; top: 28px; right: 28px; background: none; border: none; color: #FAF8F5; font-size: 28px; cursor: pointer; font-family: 'Noto Serif JP', serif; }
+  .menu-nav { display: flex; flex-direction: column; gap: 28px; text-align: center; }
+  .menu-nav a { font-size: 22px; font-family: 'Zen Old Mincho', serif; color: #FAF8F5; text-decoration: none; opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  .menu-overlay.open .menu-nav a { opacity: 1; transform: translateY(0); }
+  .menu-nav a .en { font-size: 10px; margin-left: 10px; opacity: 0.4; letter-spacing: 0.15em; }
+  .menu-credit { margin-top: 60px; opacity: 0.3; font-size: 11px; letter-spacing: 0.2em; }
+  .hero { position: relative; height: 100vh; overflow: hidden; display: flex; align-items: flex-end; }
+  .hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transform: scale(1.05); }
+  .hero-gradient { position: absolute; inset: 0; background: linear-gradient(to top, rgba(10,10,10,0.85) 0%, rgba(10,10,10,0.2) 50%, rgba(10,10,10,0.1) 100%); }
+  .hero-content { position: relative; z-index: 2; color: #FAF8F5; padding: 0 48px 72px; max-width: 780px; opacity: 0; transform: translateY(40px); transition: all 1.2s 0.4s cubic-bezier(0.23,1,0.32,1); }
+  .hero-content.loaded { opacity: 1; transform: translateY(0); }
+  .hero-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .hero-meta .cat { font-size: 11px; opacity: 0.5; }
+  .hero h1 { font-size: clamp(28px, 4vw, 44px); margin-bottom: 16px; }
+  .hero .subtitle { font-size: 15px; opacity: 0.7; margin-bottom: 24px; }
+  .hero .info { display: flex; align-items: center; gap: 16px; font-size: 12px; opacity: 0.5; }
+  .scroll-indicator { position: absolute; bottom: 28px; right: 48px; z-index: 2; color: #FAF8F5; opacity: 0.4; font-size: 10px; letter-spacing: 0.2em; writing-mode: vertical-rl; animation: breathe 3s ease-in-out infinite; }
+  @keyframes breathe { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+  .concept-band { background: #1A1A1A; color: #FAF8F5; padding: 60px 48px; text-align: center; }
+  .concept-band .body-text { max-width: 600px; margin: 0 auto; font-size: 14px; line-height: 2.2; opacity: 0.75; }
+  .cat-nav { padding: 40px 48px 20px; border-bottom: 1px solid rgba(0,0,0,0.08); display: flex; gap: 28px; overflow-x: auto; }
+  .cat-nav a { white-space: nowrap; font-size: 13px; opacity: 0.6; letter-spacing: 0.05em; font-family: 'Zen Old Mincho', serif; text-decoration: none; color: inherit; }
+  .articles-section { padding: 48px 48px 0; }
+  .section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 36px; }
+  .article-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px; }
+  .grid-card { cursor: pointer; }
+  .grid-card .img-wrap { overflow: hidden; margin-bottom: 20px; aspect-ratio: 4/3; }
+  .grid-card img { width: 100%; height: 100%; object-fit: cover; display: block; filter: grayscale(20%); transition: transform 4s cubic-bezier(0.23,1,0.32,1); }
+  .grid-card:hover img { transform: scale(1.06); }
+  .grid-card .meta { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .grid-card h3 { font-size: 20px; margin-bottom: 8px; }
+  .grid-card .sub { font-size: 13px; opacity: 0.55; margin-bottom: 12px; }
+  .grid-card .info { font-size: 11px; opacity: 0.35; display: flex; gap: 8px; }
+  .divider { display: flex; align-items: center; gap: 20px; margin: 60px 48px; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, transparent, rgba(0,0,0,0.15), transparent); }
+  .two-col { padding: 0 48px 60px; display: grid; grid-template-columns: 1.6fr 1fr; gap: 60px; align-items: start; }
+  .featured-card { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 36px; cursor: pointer; }
+  .featured-card .img-wrap { overflow: hidden; aspect-ratio: 3/2; }
+  .featured-card img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(30%); transition: transform 6s cubic-bezier(0.23,1,0.32,1); }
+  .featured-card:hover img { transform: scale(1.04); }
+  .featured-card .text { display: flex; flex-direction: column; justify-content: center; }
+  .featured-card h3 { font-size: 18px; margin-bottom: 8px; }
+  .featured-card .sub { font-size: 12px; opacity: 0.5; margin-bottom: 12px; }
+  .featured-card .info { font-size: 11px; opacity: 0.3; }
+  .side-item { border-bottom: 1px solid rgba(0,0,0,0.08); padding: 16px 0; cursor: pointer; transition: padding-left 0.3s ease; }
+  .side-item:hover { padding-left: 8px; }
+  .side-item .cat { opacity: 0.35; display: block; margin-bottom: 6px; }
+  .side-item .title { font-family: 'Zen Old Mincho', serif; font-size: 15px; line-height: 1.7; }
+  .side-item .date { display: block; font-size: 11px; opacity: 0.3; margin-top: 6px; }
+  .quote-block { border-left: 2px solid #2C2C2C; padding: 24px 0 24px 28px; margin-top: 40px; font-style: italic; font-size: 14px; opacity: 0.6; }
+  .quote-block footer { margin-top: 12px; font-size: 11px; font-style: normal; opacity: 0.5; }
+  .newsletter { background: #2C2C2C; color: #FAF8F5; padding: 72px 48px; text-align: center; }
+  .newsletter h2 { font-size: 24px; margin-bottom: 12px; letter-spacing: 0.1em; }
+  .newsletter p { font-size: 13px; opacity: 0.5; max-width: 400px; margin: 0 auto 32px; }
+  .newsletter-form { display: flex; justify-content: center; max-width: 420px; margin: 0 auto; }
+  .newsletter-form input { flex: 1; padding: 14px 18px; border: 1px solid rgba(255,255,255,0.15); border-right: none; background: transparent; color: #FAF8F5; font-size: 13px; font-family: 'Noto Serif JP', serif; outline: none; }
+  .newsletter-form input::placeholder { color: rgba(255,255,255,0.3); }
+  .newsletter-form button { padding: 14px 28px; background: #FAF8F5; color: #1A1A1A; border: none; font-size: 12px; font-family: 'Zen Old Mincho', serif; letter-spacing: 0.1em; cursor: pointer; transition: opacity 0.3s; }
+  .newsletter-form button:hover { opacity: 0.85; }
+  .site-footer { position: relative; background: #FAF8F5; border-top: 1px solid rgba(0,0,0,0.08); padding: 48px 48px 36px; overflow: hidden; }
+  .footer-kanji { font-family: 'Zen Old Mincho', serif; font-size: 120px; opacity: 0.04; position: absolute; right: 40px; bottom: -20px; line-height: 1; pointer-events: none; }
+  .footer-inner { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 32px; position: relative; z-index: 1; }
+  .footer-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .footer-desc { font-size: 11px; opacity: 0.4; max-width: 280px; }
+  .footer-links { display: flex; gap: 40px; }
+  .footer-links div { font-size: 12px; opacity: 0.4; line-height: 2.4; }
+  .footer-bottom { margin-top: 36px; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.06); display: flex; justify-content: space-between; font-size: 10px; opacity: 0.3; }
+  .footer-bottom span:last-child { letter-spacing: 0.15em; }
+  @media (max-width: 860px) {
+    .two-col { grid-template-columns: 1fr; }
+    .featured-card { grid-template-columns: 1fr; }
+    .hero-content { padding: 0 24px 48px; }
+    .articles-section, .cat-nav, .divider, .two-col, .site-footer { padding-left: 24px; padding-right: 24px; }
+    .concept-band, .newsletter { padding-left: 24px; padding-right: 24px; }
+    .site-header { padding: 16px 20px; }
+    .header-tagline { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="noise-overlay"></div>
+
+<!-- Menu -->
+<div class="menu-overlay" id="menuOverlay">
+  <button class="menu-close" onclick="toggleMenu()">&times;</button>
+  <nav class="menu-nav">
+    <a href="#" style="transition-delay:0.10s">暮らし<span class="en">Living</span></a>
+    <a href="#" style="transition-delay:0.16s">人<span class="en">People</span></a>
+    <a href="#" style="transition-delay:0.22s">犬<span class="en">Dogs</span></a>
+    <a href="#" style="transition-delay:0.28s">自然<span class="en">Nature</span></a>
+    <a href="#" style="transition-delay:0.34s">狩猟<span class="en">Hunting</span></a>
+    <a href="#" style="transition-delay:0.40s">命<span class="en">Life</span></a>
+    <a href="#" style="transition-delay:0.46s">道<span class="en">Tao</span></a>
+  </nav>
+  <div class="menu-credit">株式会社Admonth</div>
+</div>
+
+<!-- Header -->
+<header class="site-header" id="siteHeader">
+  <div class="header-left">
+    <svg width="32" height="32" viewBox="0 0 100 100" fill="none"><path d="M82 50C82 68.2 67.5 82 50 82C32.5 82 18 68.2 18 50C18 31.8 32.5 18 50 18C60 18 69 22.5 75 30" stroke="currentColor" stroke-width="5" stroke-linecap="round" style="opacity:0.7"/></svg>
+    <span class="masthead-title" style="font-size:15px">寝たらあした</span>
+  </div>
+  <div class="header-right">
+    <span class="header-tagline">Life, Death &amp; Everything Between</span>
+    <button class="menu-btn" onclick="toggleMenu()"><span></span><span></span></button>
+  </div>
+</header>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-bg" id="heroBg" style="background-image:url('https://images.unsplash.com/photo-1530281700549-e82e7bf110d6?w=900&q=80')"></div>
+  <div class="hero-gradient"></div>
+  <div class="hero-content" id="heroContent">
+    <div class="hero-meta">
+      <span class="tag-pill" style="color:#FAF8F5">FEATURE</span>
+      <span class="cat">命</span>
+    </div>
+    <h1 class="article-title">死んだ犬が教えてくれた、
+生きることの重さ</h1>
+    <p class="body-text subtitle">14年間の共存と、その終わりに見えたもの</p>
+    <div class="info"><span>山田 瞳</span><span>·</span><span>2026.03.01</span><span>·</span><span>12 min</span></div>
+  </div>
+  <div class="scroll-indicator">SCROLL</div>
+</section>
+
+<!-- Concept -->
+<section class="concept-band">
+  <div class="reveal">
+    <div class="body-text">眠れば、あしたが来る。<br>当たり前のようで、当たり前じゃないこと。<br>生きること、死ぬこと、その間にある全部。</div>
+  </div>
+</section>
+
+<!-- Category nav -->
+<nav class="cat-nav">
+  <a href="#" class="hover-line">暮らし</a><a href="#" class="hover-line">人</a><a href="#" class="hover-line">犬</a>
+  <a href="#" class="hover-line">自然</a><a href="#" class="hover-line">狩猟</a><a href="#" class="hover-line">命</a><a href="#" class="hover-line">道</a>
+</nav>
+
+<!-- Articles -->
+<section class="articles-section">
+  <div class="reveal"><div class="section-header"><h2 class="section-label">Latest Stories</h2><span class="section-sub">表 — Omote</span></div></div>
+  <div class="article-grid">
+    <div class="reveal"><div class="grid-card">
+      <div class="img-wrap"><img src="https://images.unsplash.com/photo-1511497584788-876760111969?w=600&q=80" alt=""></div>
+      <div class="meta"><span class="tag-pill">ESSAY</span><span class="cat-label" style="opacity:0.4">狩猟</span></div>
+      <h3 class="article-title">山で鹿を撃った朝、
+泣いた</h3>
+      <p class="body-text sub">命を奪う側に立つということ</p>
+      <div class="info"><span>佐藤 健一</span><span>·</span><span>9 min</span></div>
+    </div></div>
+    <div class="reveal" style="transition-delay:0.12s"><div class="grid-card">
+      <div class="img-wrap"><img src="https://images.unsplash.com/photo-1449247709967-d4461a6a6103?w=600&q=80" alt=""></div>
+      <div class="meta"><span class="tag-pill">COLUMN</span><span class="cat-label" style="opacity:0.4">暮らし</span></div>
+      <h3 class="article-title">土に還る家具と暮らす</h3>
+      <p class="body-text sub">所有しない、でも手放さない</p>
+      <div class="info"><span>田中 美咲</span><span>·</span><span>7 min</span></div>
+    </div></div>
+    <div class="reveal" style="transition-delay:0.24s"><div class="grid-card">
+      <div class="img-wrap"><img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=80" alt=""></div>
+      <div class="meta"><span class="tag-pill">INTERVIEW</span><span class="cat-label" style="opacity:0.4">道</span></div>
+      <h3 class="article-title">タオイストの庭師が
+語る「無為」</h3>
+      <p class="body-text sub">何もしないことの、途方もない力</p>
+      <div class="info"><span>李 明華</span><span>·</span><span>15 min</span></div>
+    </div></div>
+  </div>
+</section>
+
+<!-- Divider -->
+<div class="divider">
+  <svg width="28" height="28" viewBox="0 0 100 100" fill="none"><path d="M82 50C82 68.2 67.5 82 50 82C32.5 82 18 68.2 18 50C18 31.8 32.5 18 50 18C60 18 69 22.5 75 30" stroke="currentColor" stroke-width="5" stroke-linecap="round" style="opacity:0.7"/></svg>
+</div>
+
+<!-- Two-column -->
+<section class="two-col">
+  <div>
+    <div class="reveal"><div class="section-header"><h2 class="section-label">In Depth</h2><span class="section-sub">裏 — Ura</span></div></div>
+    <div class="reveal"><div class="featured-card">
+      <div class="img-wrap"><img src="https://images.unsplash.com/photo-1448375240586-882707db888b?w=600&q=80" alt=""></div>
+      <div class="text">
+        <span class="tag-pill" style="margin-bottom:12px;align-self:flex-start">PHOTO ESSAY</span>
+        <h3 class="article-title">朽ちてゆく森の記録</h3>
+        <p class="body-text sub">倒木が生む、新しい生態系</p>
+        <div class="info">写真：木村 拓 · 5 min</div>
+      </div>
+    </div></div>
+    <div class="reveal" style="transition-delay:0.15s"><div class="featured-card">
+      <div class="img-wrap"><img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80" alt=""></div>
+      <div class="text">
+        <span class="tag-pill" style="margin-bottom:12px;align-self:flex-start">DOCUMENTARY</span>
+        <h3 class="article-title">看取り士という仕事</h3>
+        <p class="body-text sub">最期の呼吸に立ち会う人々</p>
+        <div class="info">中村 葵 · 11 min</div>
+      </div>
+    </div></div>
+  </div>
+  <div>
+    <div class="reveal" style="transition-delay:0.2s">
+      <h2 class="section-label" style="margin-bottom:24px">More to Read</h2>
+      <div class="side-item"><span class="cat-label cat">犬</span><span class="hover-line title">保護犬と暮らす365日目の手紙</span><span class="date">2026.01.28</span></div>
+      <div class="side-item"><span class="cat-label cat">信仰</span><span class="hover-line title">祈りのない祈り——無宗教の弔い</span><span class="date">2026.01.22</span></div>
+      <div class="side-item"><span class="cat-label cat">依存</span><span class="hover-line title">酒を断った日から、夜が長くなった</span><span class="date">2026.01.15</span></div>
+      <div class="side-item"><span class="cat-label cat">人生</span><span class="hover-line title">60歳で会社を辞め、猟師になった男</span><span class="date">2026.01.10</span></div>
+      <div class="side-item"><span class="cat-label cat">共存</span><span class="hover-line title">熊が出る村で、子どもを育てる</span><span class="date">2026.01.05</span></div>
+    </div>
+    <div class="reveal" style="transition-delay:0.35s">
+      <blockquote class="quote-block body-text">道の道とすべきは、<br>常の道に非ず。<footer>——老子『道徳経』第一章</footer></blockquote>
+    </div>
+  </div>
+</section>
+
+<!-- Newsletter -->
+<div class="reveal">
+  <section class="newsletter">
+    <h2 class="masthead-title">おやすみ前に、読む。</h2>
+    <p class="body-text">毎週金曜の夜、あしたにつながる一通を届けます。</p>
+    <div class="newsletter-form"><input type="email" placeholder="メールアドレス"><button>登録</button></div>
+  </section>
+</div>
+
+<!-- Footer -->
+<footer class="site-footer">
+  <span class="footer-kanji">道</span>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">
+        <svg width="28" height="28" viewBox="0 0 100 100" fill="none"><path d="M82 50C82 68.2 67.5 82 50 82C32.5 82 18 68.2 18 50C18 31.8 32.5 18 50 18C60 18 69 22.5 75 30" stroke="currentColor" stroke-width="5" stroke-linecap="round" style="opacity:0.7"/></svg>
+        <span class="masthead-title" style="font-size:16px">寝たらあした</span>
+      </div>
+      <p class="body-text footer-desc">人と生き物・自然を中心とした<br>生死にまつわるWEBメディア</p>
+    </div>
+    <div class="footer-links">
+      <div><div class="hover-line">About</div><div class="hover-line">Contact</div><div class="hover-line">Privacy</div></div>
+      <div><div class="hover-line">Instagram</div><div class="hover-line">X / Twitter</div><div class="hover-line">Note</div></div>
+    </div>
+  </div>
+  <div class="footer-bottom"><span>&copy; 2026 株式会社Admonth</span><span>寝たらあした — Netara Ashita</span></div>
+</footer>
+
+<script>
+function toggleMenu(){document.getElementById('menuOverlay').classList.toggle('open')}
+const header=document.getElementById('siteHeader');
+const heroBg=document.getElementById('heroBg');
+window.addEventListener('scroll',()=>{
+  const y=window.scrollY;
+  const o=Math.min(y/300,0.95);
+  header.style.background=`rgba(250,248,245,${o})`;
+  header.style.backdropFilter=o>0.1?'blur(12px)':'none';
+  header.style.borderBottomColor=o>0.3?'rgba(0,0,0,0.06)':'transparent';
+  heroBg.style.transform=`scale(1.05) translateY(${y*0.12}px)`;
+},{passive:true});
+setTimeout(()=>{document.getElementById('heroContent').classList.add('loaded')},200);
+const obs=new IntersectionObserver(e=>{e.forEach(el=>{if(el.isIntersecting){el.target.classList.add('visible');obs.unobserve(el.target)}})},{threshold:0.15});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>
